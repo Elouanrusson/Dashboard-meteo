@@ -16,7 +16,7 @@ def previsions_toulouse_ia():
     url = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
-        f"&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+        f"&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,precipitation,cape,surface_pressure"
         f"&models=meteofrance_arome_france"
         f"&timezone=Europe%2FParis"
         f"&forecast_days=2"

@@ -1,5 +1,5 @@
 visualisation avancée : 
--  Particules animées : Remplacer les flèches statiques par des flux animés (façon Nullschool) avec la technologie WebGL (Canvas).
+- Particules animées : Remplacer les flèches statiques par des flux animés (façon Nullschool) avec la technologie WebGL (Canvas).
 - Cartes de chaleur (Heatmaps) : Calculer et colorer les zones entre les bouées pour un rendu continu et fluide.
 - Nouvelles couches météo : Ajouter les précipitations, la couverture nuageuse, et la température de l'eau.
 - prévision des phénomènes orageux et des tempêtes
@@ -8,6 +8,9 @@ Intelligence & Données (Backend) :
 - Base de données (SQL/SQLite) : Archiver les historiques au lieu d'écraser le fichier JSON pour mesurer la précision de l'IA dans le temps.
 - IA Étendue : Entraîner de nouveaux modèles pour prédire la houle ou corriger la météo marine.
 - Maillage dynamique : Permettre de cliquer n'importe où sur la carte globale pour générer une nouvelle grille à la volée.
+- Moteur de recherche dynamique : Refonte de l'architecture pour créer une API Python sur-mesure capable d'analyser n'importe quel point GPS à la demande.
+- Hébergement de l'API : Déployer le serveur FastAPI sur un service cloud adapté (comme Render ou Railway) pour qu'il soit joignable 24h/24 par le site web.
+- Reconnexion de l'IA : Intégrer le modèle Scikit-Learn dans la nouvelle route "/previsions" de FastAPI pour appliquer les corrections en temps réel.
 
 Infrastructure & Ergonomie (UX/Ops) :
 - Hébergement Cloud (VPS) : Mettre le script sur un vrai serveur distant pour y accéder en 4G/5G même quand ton PC est éteint.
@@ -15,3 +18,6 @@ Infrastructure & Ergonomie (UX/Ops) :
 - Progressive Web App (PWA) : Transformer le site en vraie application mobile téléchargeable sur l'écran d'accueil de ton iPhone.
 -Monitoring & Logs : Créer un fichier de suivi automatique (logs.txt) pour garder une trace des erreurs de l'orchestrateur (pratique quand le script tourne tout seul en arrière-plan).
 - Responsive Design : Adapter la taille du tableau et des textes spécifiquement pour les écrans de smartphone (une étape nécessaire avant de faire la vraie application mobile PWA).
+- Nom de domaine personnalisé : Lier une vraie adresse web (ex: www.mon-spot-meteo.fr) pour remplacer l'URL GitHub.
+- Sécurisation des clés (GitHub Secrets) : Préparer le terrain si on décide plus tard d'utiliser des API payantes ou privées sans exposer les mots de passe dans le code public.
+- PWA (Progressive Web App) : Puisque le site est en ligne avec HTTPS (grâce à GitHub), on a maintenant les pré-requis pour forcer l'installation de l'application sur l'écran d'accueil du smartphone.

@@ -124,7 +124,7 @@ async function rafraichirTableauContextuel() {
     try {
         if (idBoueeActive === null) {
             // Toulouse par défaut
-            const rep = await fetch('donnees_toulouse.json');
+            const rep = await fetch('http://127.0.0.1:8000/previsions?lat=43.60&lon=1.44');
             const data = await rep.json();
             dessinerTableau(data.hourly, "Toulouse (Terrestre - IA)", "terrestre");
         } else {
