@@ -5,7 +5,42 @@
 
 // --- PARTIE 1 : ÉTAT GLOBAL DE L'APPLICATION ---
 const carte = L.map('ma-carte').setView([50.0, -0.5], 7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(carte);
+// Variable pour stocker le marqueur visuel du clic
+let marqueurDynamique = null;
+
+// Écouter les clics sur la carte (on utilise bien 'carte' ici)
+carte.on('click', async function(e) {
+    // 1. Récupérer les coordonnées exactes du clic (arrondies à 2 décimales)
+    const lat = e.latlng.lat.toFixed(2);
+    const lon = e.latlng.lng.toFixed(2);
+
+    console.log(`🌍 Clic détecté sur la carte : Lat ${lat}, Lon ${lon}`);
+
+    // 2. Placer un marqueur visuel pour savoir où on a cliqué
+    if (marqueurDynamique) {
+        carte.removeLayer(marqueurDynamique); // Retirer l'ancien marqueur s'il existe
+    }
+    marqueurDynamique = L.marker([lat, lon]).addTo(carte)
+        .bindPopup(`<b>Point Dynamique</b><br>Lat: ${lat}<br>Lon: ${lon}`).openPopup();
+
+    // 3. Interroger ton serveur Python avec ces coordonnées
+    try {
+        const rep = await fetch(`http://127.0.0.1:8000/previsions?lat=${lat}&lon=${lon}`);
+        const data = await rep.json();
+
+        // 4. Mettre à jour le tableau avec les nouvelles données
+        dessinerTableau(data.hourly, `Prévisions sur mesure (${lat}, ${lon})`, "dynamique");
+
+    } catch (erreur) {
+        console.error("❌ Erreur lors de la communication avec l'API locale :", erreur);
+    }
+});
+
+// On ajoute le fond de carte visuel (OpenStreetMap)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+}).addTo(carte); // <-- On l'ajoute bien à 'carte' ici aussi !
 
 let donneesMarinesGlobales = null;
 // Mémorisation de l'heure active du slider (H+0 par défaut)
@@ -90,7 +125,15 @@ function genererCellule(donnee, couleurBg, indexCellule) {
 }
 // Fonction centrale de dessin du tableau
 function dessinerTableau(hourlyData, nomDuSpot, typeSpot) {
-    document.querySelector('.module:nth-child(2) h2').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
+    document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
+
+    // 🛡️ LE BOUCLIER ANTI-CRASH
+    // Si la variable hourlyData n'existe pas ou est vide, on arrête tout
+    if (!hourlyData || !hourlyData.time) {
+        console.warn(`Données introuvables pour : ${nomDuSpot}`);
+        alert(`Désolé, l'API météo n'a renvoyé aucune prévision pour ce lieu (${nomDuSpot}). Essayez un autre point !`);
+        return; // Le mot-clé 'return' interrompt la fonction ici, empêchant le crash de la ligne suivante !
+    }
 
     const estMarin = (typeSpot === 'marin');
     const heures = hourlyData.time.slice(0, 24);
@@ -155,5 +198,42 @@ async function demarrer() {
 
     } catch (e) { console.error("Erreur Générale:", e); }
 }
+
+// ==========================================
+// MOTEUR DE RECHERCHE : VILLE -> COORDONNÉES
+// ==========================================
+document.getElementById('btn-recherche').addEventListener('click', async () => {
+    const ville = document.getElementById('input-ville').value;
+    if (!ville) return; // Si le champ est vide, on ne fait rien
+
+    try {
+        // 1. Géocodage : on demande les coordonnées de la ville à OpenStreetMap
+        const repGeo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}`);
+        const dataGeo = await repGeo.json();
+
+        if (dataGeo.length === 0) {
+            alert("Ville introuvable. Essayez de préciser (ex: Paris, France) !");
+            return;
+        }
+
+        // On extrait la latitude et longitude du premier résultat
+        const lat = parseFloat(dataGeo[0].lat).toFixed(2);
+        const lon = parseFloat(dataGeo[0].lon).toFixed(2);
+        console.log(`📍 Recherche : ${ville} -> Lat ${lat}, Lon ${lon}`);
+
+        // 2. (Bonus UX) On déplace la vue de la carte sur la ville cherchée
+        carte.setView([lat, lon], 11); 
+
+        // 3. On interroge ton API Python avec ces nouvelles coordonnées
+        const repMeteo = await fetch(`http://127.0.0.1:8000/previsions?lat=${lat}&lon=${lon}`);
+        const dataMeteo = await repMeteo.json();
+
+        // 4. On met à jour le tableau
+        dessinerTableau(dataMeteo.hourly, `Prévisions : ${ville.toUpperCase()}`, "dynamique");
+
+    } catch (erreur) {
+        console.error("❌ Erreur lors de la recherche :", erreur);
+    }
+});
 
 demarrer();

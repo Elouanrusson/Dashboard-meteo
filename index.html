@@ -87,9 +87,14 @@
                 Heure H+0
             </div>
         </div>
+        
+        <div id="barre-recherche" style="text-align: center; margin-bottom: 20px; padding: 10px;">
+        <input type="text" id="input-ville" placeholder="Entrez une ville (ex: Biarritz)..." style="padding: 8px; width: 250px; border-radius: 5px; border: 1px solid #ccc;">
+        <button id="btn-recherche" style="padding: 8px 15px; cursor: pointer; border-radius: 5px; border: none; background-color: #007BFF; color: white;">Chercher</button>
+        </div>
 
         <div class="module">
-            <h2>📍 Prévisions Locales (Toulouse - IA)</h2>
+            <h2 id="titre-tableau">📍 Prévisions Locales</h2>
             <div class="table-container">
                 <table>
                     <tbody id="windguru-body">

@@ -23,13 +23,12 @@ def accueil():
 
 @app.get("/previsions")
 def obtenir_previsions(lat: float, lon: float):
-    # 1. Requête Météo classique (Ciel, Vent, Orages)
+    # 1. Requête Météo classique (Mondiale)
     url_meteo = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
         f"&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,precipitation,cape,surface_pressure"
-        f"&models=meteofrance_arome_france"
-        f"&timezone=Europe%2FParis"
+        f"&timezone=auto" 
     )
     reponse_meteo = requests.get(url_meteo).json()
 

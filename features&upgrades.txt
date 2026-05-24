@@ -21,3 +21,4 @@ Infrastructure & Ergonomie (UX/Ops) :
 - Nom de domaine personnalisé : Lier une vraie adresse web (ex: www.mon-spot-meteo.fr) pour remplacer l'URL GitHub.
 - Sécurisation des clés (GitHub Secrets) : Préparer le terrain si on décide plus tard d'utiliser des API payantes ou privées sans exposer les mots de passe dans le code public.
 - PWA (Progressive Web App) : Puisque le site est en ligne avec HTTPS (grâce à GitHub), on a maintenant les pré-requis pour forcer l'installation de l'application sur l'écran d'accueil du smartphone.
+- Interactivité de la carte : Clic direct sur n'importe quel point de la carte pour générer des prévisions dynamiques instantanées via l'API.
