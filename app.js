@@ -61,6 +61,27 @@ async function chargerRadarPluie() {
 chargerRadarPluie();
 
 // ==============================================================================
+// 3. AJOUT DES COUCHES OPENWEATHERMAP (Nuages & Vent)
+// ==============================================================================
+const cleAPI_OWM = "TA_CLE_API_ICI"; // ⚠️ Colle ta clé ici !
+
+// Création de la couche des Nuages
+const radarNuages = L.tileLayer(`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${cleAPI_OWM}`, {
+    opacity: 0.7, // Transparence pour voir la carte en dessous
+    attribution: "Nuages © OpenWeatherMap"
+});
+
+// Création de la couche du Vent (Couleurs selon la force)
+const radarVent = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${cleAPI_OWM}`, {
+    opacity: 0.6,
+    attribution: "Vent © OpenWeatherMap"
+});
+
+// On ajoute ces deux nouvelles couches au menu en haut à droite !
+controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
+controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
+
+// ==============================================================================
 // INTERACTION : Écouter les clics sur la carte
 // ==============================================================================
 carte.on('click', async function(e) {
