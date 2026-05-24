@@ -22,9 +22,6 @@ const carte = L.map('ma-carte', {
 let marqueurDynamique = null;
 
 // Variables globales de ton application
-let donneesMarinesGlobales = null;
-let indexTemporelActuel = 0; 
-let idBoueeActive = null; 
 const groupeFleches = L.layerGroup().addTo(carte);
 
 // 3. Préparation du menu de contrôle des couches (en haut à droite)
@@ -167,71 +164,73 @@ function genererCellule(donnee, couleurBg, indexCellule) {
     return `<td class="data-cell" style="background-color: ${couleurBg}; ${styleActive}">${donnee}</td>`;
 }
 // Fonction centrale de dessin du tableau
-function dessinerTableau(hourlyData, nomDuSpot, typeSpot) {
+function dessinerTableau(hourlyData, nomDuSpot) {
     document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
 
-    // 🛡️ LE BOUCLIER ANTI-CRASH
     if (!hourlyData || !hourlyData.time) {
         console.warn(`Données introuvables pour : ${nomDuSpot}`);
-        alert(`Désolé, l'API météo n'a renvoyé aucune prévision pour ce lieu (${nomDuSpot}). Essayez un autre point !`);
+        alert(`Désolé, l'API n'a renvoyé aucune prévision pour ce lieu. Essayez un autre point !`);
         return; 
     }
 
-    const estMarin = (typeSpot === 'marin');
+    // 🌊 DÉTECTION INTELLIGENTE : Est-ce qu'on est en mer ?
+    const estMarin = (hourlyData.wave_height !== undefined);
     
-    // --- 🕒 NOUVELLE LOGIQUE TEMPORELLE (La Fenêtre Glissante) ---
-    const maintenant = new Date(); // L'heure de ton téléphone/PC
+    // --- Logique Temporelle (Fenêtre glissante) ---
+    const maintenant = new Date(); 
     let indexActuel = 0;
-    
-    // 1. On cherche la colonne qui correspond à l'heure actuelle
     for (let i = 0; i < hourlyData.time.length; i++) {
-        const datePrevision = new Date(hourlyData.time[i]);
-        if (datePrevision > maintenant) {
-            indexActuel = Math.max(0, i - 1); // On prend la dernière heure passée
+        if (new Date(hourlyData.time[i]) > maintenant) {
+            indexActuel = Math.max(0, i - 1); 
             break;
         }
     }
 
-    // 2. On définit notre fenêtre : 3 heures avant, 24 heures après
-    const nbHeuresAvant = 3;
-    const nbHeuresApres = 24;
-    
-    // Math.max et Math.min empêchent le code de planter si on déborde du tableau de données
-    const indexDebut = Math.max(0, indexActuel - nbHeuresAvant);
-    const indexFin = Math.min(hourlyData.time.length - 1, indexActuel + nbHeuresApres);
-    // -------------------------------------------------------------
+    const indexDebut = Math.max(0, indexActuel - 3);
+    const indexFin = Math.min(hourlyData.time.length - 1, indexActuel + 24);
+    // ---------------------------------------------
 
+    // ☁️ LIGNES DE BASE (Toujours affichées : Terre & Mer)
     let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
-    let ligne2 = `<tr><td class="colonne-fixe">${estMarin ? "Houle (m)" : "Température (°C)"}</td>`;
-    let ligne3 = `<tr><td class="colonne-fixe">${estMarin ? "Courant (km/h)" : "Vent (km/h)"}</td>`;
-    let ligne4 = `<tr><td class="colonne-fixe">${estMarin ? "Dir. Houle (°)" : "Rafales IA (km/h)"}</td>`;
+    let ligneTemp = `<tr><td class="colonne-fixe">Température (°C)</td>`;
+    let ligneVent = `<tr><td class="colonne-fixe">Vent (km/h)</td>`;
+    let ligneRafales = `<tr><td class="colonne-fixe">Rafales IA (km/h)</td>`;
 
-    // 3. On boucle uniquement sur notre fenêtre glissante (de indexDebut à indexFin)
+    // 🌊 LIGNES BONUS (Affichées uniquement en Mer)
+    let ligneHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Houle (m)</td>` : "";
+    let ligneDirHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Dir. Houle (°)</td>` : "";
+    let ligneCourant = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Courant (km/h)</td>` : "";
+
     for (let i = indexDebut; i <= indexFin; i++) {
-        
         const estHeureActuelle = (i === indexActuel);
-        
-        // Ligne Heure (surlignage jaune si c'est l'heure actuelle)
         const styleH = estHeureActuelle ? "color:#facc15; font-weight:bold; font-size:1.1em;" : "color:#94a3b8;";
-        const heureTexte = hourlyData.time[i].split('T')[1]; // Ex: "14:00"
-        
-        // Ajout du petit texte "Maintenant" pour l'UX
+        const heureTexte = hourlyData.time[i].split('T')[1]; 
         const affichageHeure = estHeureActuelle ? `${heureTexte}<br><span style="font-size:0.6em; color:#facc15;">Maintenant</span>` : heureTexte;
+        
         ligneHeures += `<td style="${styleH}">${affichageHeure}</td>`;
         
-        // Lignes de données
+        // Remplissage des données de base
+        ligneTemp += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
+        ligneVent += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
+        ligneRafales += genererCellule(hourlyData.rafales_ia[i], bgVent(hourlyData.rafales_ia[i]), i);
+
+        // Remplissage des données marines en plus !
         if (estMarin) {
-            ligne2 += genererCellule(hourlyData.wave_height[i], couleurHoule(hourlyData.wave_height[i]), i);
-            ligne3 += genererCellule(hourlyData.ocean_current_velocity[i], bgVent(hourlyData.ocean_current_velocity[i]), i);
-            ligne4 += genererCellule(hourlyData.wave_direction[i], '#e2e8f0', i); 
-        } else {
-            ligne2 += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
-            ligne3 += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
-            ligne4 += genererCellule(hourlyData.rafales_ia[i], bgVent(hourlyData.rafales_ia[i]), i);
+            ligneHoule += genererCellule(hourlyData.wave_height[i], couleurHoule(hourlyData.wave_height[i]), i);
+            ligneDirHoule += genererCellule(hourlyData.wave_direction[i], '#e2e8f0', i); 
+            ligneCourant += genererCellule(hourlyData.ocean_current_velocity[i], bgVent(hourlyData.ocean_current_velocity[i]), i);
         }
     }
     
-    document.getElementById('windguru-body').innerHTML = ligneHeures + `</tr>` + ligne2 + `</tr>` + ligne3 + `</tr>` + ligne4 + `</tr>`;
+    // Fermeture propre de toutes les balises <tr>
+    ligneHeures += `</tr>`; ligneTemp += `</tr>`; ligneVent += `</tr>`; ligneRafales += `</tr>`;
+    if (estMarin) { ligneHoule += `</tr>`; ligneDirHoule += `</tr>`; ligneCourant += `</tr>`; }
+
+    // Assemblage final du code HTML
+    let htmlFinal = ligneHeures + ligneTemp + ligneVent + ligneRafales;
+    if (estMarin) { htmlFinal += ligneHoule + ligneDirHoule + ligneCourant; }
+
+    document.getElementById('windguru-body').innerHTML = htmlFinal;
 }
 
 // Fonction de pilotage qui décide quoi afficher dans le tableau
