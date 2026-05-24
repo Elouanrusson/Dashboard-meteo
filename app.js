@@ -156,7 +156,7 @@ function dessinerTableau(hourlyData, nomDuSpot, typeSpot) {
         } else {
             ligne2 += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
             ligne3 += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
-            ligne4 += genererCellule(hourlyData.wind_gusts_10m[i], bgVent(hourlyData.wind_gusts_10m[i]), i);
+            ligne4 += genererCellule(hourlyData.rafales_ia[i], bgVent(hourlyData.rafales_ia[i]), i);
         }
     }
     document.getElementById('windguru-body').innerHTML = ligneHeures + `</tr>` + ligne2 + `</tr>` + ligne3 + `</tr>` + ligne4 + `</tr>`;
