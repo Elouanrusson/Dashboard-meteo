@@ -25,7 +25,7 @@ carte.on('click', async function(e) {
 
     // 3. Interroger ton serveur Python avec ces coordonnées
     try {
-        const rep = await fetch(`http://127.0.0.1:8000/previsions?lat=${lat}&lon=${lon}`);
+        const rep = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}`);
         const data = await rep.json();
 
         // 4. Mettre à jour le tableau avec les nouvelles données
@@ -167,7 +167,7 @@ async function rafraichirTableauContextuel() {
     try {
         if (idBoueeActive === null) {
             // Toulouse par défaut
-            const rep = await fetch('http://127.0.0.1:8000/previsions?lat=43.60&lon=1.44');
+            const rep = await fetch('https://dashboard-meteo.onrender.com/previsions?lat=43.60&lon=1.44');
             const data = await rep.json();
             dessinerTableau(data.hourly, "Toulouse (Terrestre - IA)", "terrestre");
         } else {
@@ -225,7 +225,7 @@ document.getElementById('btn-recherche').addEventListener('click', async () => {
         carte.setView([lat, lon], 11); 
 
         // 3. On interroge ton API Python avec ces nouvelles coordonnées
-        const repMeteo = await fetch(`http://127.0.0.1:8000/previsions?lat=${lat}&lon=${lon}`);
+        const repMeteo = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}`);
         const dataMeteo = await repMeteo.json();
 
         // 4. On met à jour le tableau
