@@ -3,12 +3,69 @@
 // RÔLE : Carte marine figée au Slider / Tableau contextuel avec surlignage.
 // ==============================================================================
 
-// --- PARTIE 1 : ÉTAT GLOBAL DE L'APPLICATION ---
-const carte = L.map('ma-carte').setView([50.0, -0.5], 7);
+// --- PARTIE 1 : ÉTAT GLOBAL ET INITIALISATION DE LA CARTE ---
+
+// 1. Définition du fond de carte principal
+const fondOpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+});
+
+// 2. Création de la carte avec une vue par défaut
+const carte = L.map('ma-carte', {
+    center: [50.0, -0.5],
+    zoom: 7,
+    layers: [fondOpenStreetMap] // On charge le fond OSM par défaut
+});
+
 // Variable pour stocker le marqueur visuel du clic
 let marqueurDynamique = null;
 
-// Écouter les clics sur la carte (on utilise bien 'carte' ici)
+// Variables globales de ton application
+let donneesMarinesGlobales = null;
+let indexTemporelActuel = 0; 
+let idBoueeActive = null; 
+const groupeFleches = L.layerGroup().addTo(carte);
+
+// 3. Préparation du menu de contrôle des couches (en haut à droite)
+const couchesDeBase = {
+    "Carte Standard": fondOpenStreetMap
+};
+const couchesSuperposees = {}; 
+
+const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
+
+// ==============================================================================
+// RADAR DE PLUIE (RainViewer) - Mise à jour automatique des couches
+// ==============================================================================
+async function chargerRadarPluie() {
+    try {
+        const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        const data = await rep.json();
+        
+        // Récupération de la dernière image radar disponible
+        const derniereImage = data.radar.past[data.radar.past.length - 1]; 
+
+        // Création de la couche transparente de pluie
+        const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+            opacity: 0.6, 
+            attribution: "Radar © RainViewer"
+        });
+
+        // Ajout de la case à cocher dans le menu de droite
+        controleurDeCouches.addOverlay(radarPluie, "🌧️ Radar de Précipitations");
+
+    } catch (erreur) {
+        console.error("❌ Impossible de charger le radar RainViewer :", erreur);
+    }
+}
+
+// Lancement automatique du radar au démarrage
+chargerRadarPluie();
+
+// ==============================================================================
+// INTERACTION : Écouter les clics sur la carte
+// ==============================================================================
 carte.on('click', async function(e) {
     // 1. Récupérer les coordonnées exactes du clic (arrondies à 2 décimales)
     const lat = e.latlng.lat.toFixed(2);
@@ -18,7 +75,7 @@ carte.on('click', async function(e) {
 
     // 2. Placer un marqueur visuel pour savoir où on a cliqué
     if (marqueurDynamique) {
-        carte.removeLayer(marqueurDynamique); // Retirer l'ancien marqueur s'il existe
+        carte.removeLayer(marqueurDynamique); 
     }
     marqueurDynamique = L.marker([lat, lon]).addTo(carte)
         .bindPopup(`<b>Point Dynamique</b><br>Lat: ${lat}<br>Lon: ${lon}`).openPopup();
@@ -35,20 +92,6 @@ carte.on('click', async function(e) {
         console.error("❌ Erreur lors de la communication avec l'API locale :", erreur);
     }
 });
-
-// On ajoute le fond de carte visuel (OpenStreetMap)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-}).addTo(carte); // <-- On l'ajoute bien à 'carte' ici aussi !
-
-let donneesMarinesGlobales = null;
-// Mémorisation de l'heure active du slider (H+0 par défaut)
-let indexTemporelActuel = 0; 
-// Mémorisation du spot actif (Toulouse ou id de la bouée)
-let idBoueeActive = null; 
-
-const groupeFleches = L.layerGroup().addTo(carte);
 
 // --- FONCTIONS DE COLORIMÉTRIE PASTEL ---
 function bgTemp(t) { return t < 15 ? '#bae6fd' : t < 25 ? '#fef08a' : '#fecaca'; }
@@ -128,37 +171,66 @@ function dessinerTableau(hourlyData, nomDuSpot, typeSpot) {
     document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
 
     // 🛡️ LE BOUCLIER ANTI-CRASH
-    // Si la variable hourlyData n'existe pas ou est vide, on arrête tout
     if (!hourlyData || !hourlyData.time) {
         console.warn(`Données introuvables pour : ${nomDuSpot}`);
         alert(`Désolé, l'API météo n'a renvoyé aucune prévision pour ce lieu (${nomDuSpot}). Essayez un autre point !`);
-        return; // Le mot-clé 'return' interrompt la fonction ici, empêchant le crash de la ligne suivante !
+        return; 
     }
 
     const estMarin = (typeSpot === 'marin');
-    const heures = hourlyData.time.slice(0, 24);
     
+    // --- 🕒 NOUVELLE LOGIQUE TEMPORELLE (La Fenêtre Glissante) ---
+    const maintenant = new Date(); // L'heure de ton téléphone/PC
+    let indexActuel = 0;
+    
+    // 1. On cherche la colonne qui correspond à l'heure actuelle
+    for (let i = 0; i < hourlyData.time.length; i++) {
+        const datePrevision = new Date(hourlyData.time[i]);
+        if (datePrevision > maintenant) {
+            indexActuel = Math.max(0, i - 1); // On prend la dernière heure passée
+            break;
+        }
+    }
+
+    // 2. On définit notre fenêtre : 3 heures avant, 24 heures après
+    const nbHeuresAvant = 3;
+    const nbHeuresApres = 24;
+    
+    // Math.max et Math.min empêchent le code de planter si on déborde du tableau de données
+    const indexDebut = Math.max(0, indexActuel - nbHeuresAvant);
+    const indexFin = Math.min(hourlyData.time.length - 1, indexActuel + nbHeuresApres);
+    // -------------------------------------------------------------
+
     let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
     let ligne2 = `<tr><td class="colonne-fixe">${estMarin ? "Houle (m)" : "Température (°C)"}</td>`;
     let ligne3 = `<tr><td class="colonne-fixe">${estMarin ? "Courant (km/h)" : "Vent (km/h)"}</td>`;
     let ligne4 = `<tr><td class="colonne-fixe">${estMarin ? "Dir. Houle (°)" : "Rafales IA (km/h)"}</td>`;
 
-    for (let i = 0; i < 24; i++) {
-        // Ligne Heure (surlignage jaune du texte)
-        const styleH = (i === indexTemporelActuel) ? "color:#facc15; font-weight:bold; font-size:1.1em;" : "color:#94a3b8;";
-        ligneHeures += `<td style="${styleH}">${heures[i].split('T')[1]}</td>`;
+    // 3. On boucle uniquement sur notre fenêtre glissante (de indexDebut à indexFin)
+    for (let i = indexDebut; i <= indexFin; i++) {
         
-        // Lignes de données (surlignage de la bordure de cellule)
+        const estHeureActuelle = (i === indexActuel);
+        
+        // Ligne Heure (surlignage jaune si c'est l'heure actuelle)
+        const styleH = estHeureActuelle ? "color:#facc15; font-weight:bold; font-size:1.1em;" : "color:#94a3b8;";
+        const heureTexte = hourlyData.time[i].split('T')[1]; // Ex: "14:00"
+        
+        // Ajout du petit texte "Maintenant" pour l'UX
+        const affichageHeure = estHeureActuelle ? `${heureTexte}<br><span style="font-size:0.6em; color:#facc15;">Maintenant</span>` : heureTexte;
+        ligneHeures += `<td style="${styleH}">${affichageHeure}</td>`;
+        
+        // Lignes de données
         if (estMarin) {
             ligne2 += genererCellule(hourlyData.wave_height[i], couleurHoule(hourlyData.wave_height[i]), i);
             ligne3 += genererCellule(hourlyData.ocean_current_velocity[i], bgVent(hourlyData.ocean_current_velocity[i]), i);
-            ligne4 += genererCellule(hourlyData.wave_direction[i], '#e2e8f0', i); // Gris neutre pour angle
+            ligne4 += genererCellule(hourlyData.wave_direction[i], '#e2e8f0', i); 
         } else {
             ligne2 += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
             ligne3 += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
             ligne4 += genererCellule(hourlyData.rafales_ia[i], bgVent(hourlyData.rafales_ia[i]), i);
         }
     }
+    
     document.getElementById('windguru-body').innerHTML = ligneHeures + `</tr>` + ligne2 + `</tr>` + ligne3 + `</tr>` + ligne4 + `</tr>`;
 }
 
