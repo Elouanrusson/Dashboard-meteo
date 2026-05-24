@@ -174,7 +174,7 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     }
 
     // 🌊 DÉTECTION INTELLIGENTE : Est-ce qu'on est en mer ?
-    const estMarin = (hourlyData.wave_height !== undefined);
+    const estMarin = hourlyData.wave_height && hourlyData.wave_height.some(val => val !== null);
     
     // --- Logique Temporelle (Fenêtre glissante) ---
     const maintenant = new Date(); 

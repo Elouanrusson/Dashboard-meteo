@@ -38,6 +38,7 @@ def obtenir_previsions(lat: float, lon: float):
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
         f"&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,precipitation,cape,surface_pressure"
+        f"&past_days=1"
         f"&timezone=auto" 
     )
     reponse_meteo = requests.get(url_meteo).json()
@@ -47,6 +48,7 @@ def obtenir_previsions(lat: float, lon: float):
         f"https://marine-api.open-meteo.com/v1/marine"
         f"?latitude={lat}&longitude={lon}"
         f"&hourly=wave_height,wave_direction,ocean_current_velocity,ocean_current_direction"
+        f"&past_days=1"
         f"&timezone=Europe%2FParis"
     )
     reponse_marine = requests.get(url_marine).json()
