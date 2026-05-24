@@ -1,0 +1,17 @@
+visualisation avancée : 
+-  Particules animées : Remplacer les flèches statiques par des flux animés (façon Nullschool) avec la technologie WebGL (Canvas).
+- Cartes de chaleur (Heatmaps) : Calculer et colorer les zones entre les bouées pour un rendu continu et fluide.
+- Nouvelles couches météo : Ajouter les précipitations, la couverture nuageuse, et la température de l'eau.
+- prévision des phénomènes orageux et des tempêtes
+
+Intelligence & Données (Backend) : 
+- Base de données (SQL/SQLite) : Archiver les historiques au lieu d'écraser le fichier JSON pour mesurer la précision de l'IA dans le temps.
+- IA Étendue : Entraîner de nouveaux modèles pour prédire la houle ou corriger la météo marine.
+- Maillage dynamique : Permettre de cliquer n'importe où sur la carte globale pour générer une nouvelle grille à la volée.
+
+Infrastructure & Ergonomie (UX/Ops) :
+- Hébergement Cloud (VPS) : Mettre le script sur un vrai serveur distant pour y accéder en 4G/5G même quand ton PC est éteint.
+- Sélecteur de calques : Ajouter un menu latéral pour basculer la vue de la carte (ex: Mode Océan vs Mode Atmosphère).
+- Progressive Web App (PWA) : Transformer le site en vraie application mobile téléchargeable sur l'écran d'accueil de ton iPhone.
+-Monitoring & Logs : Créer un fichier de suivi automatique (logs.txt) pour garder une trace des erreurs de l'orchestrateur (pratique quand le script tourne tout seul en arrière-plan).
+- Responsive Design : Adapter la taille du tableau et des textes spécifiquement pour les écrans de smartphone (une étape nécessaire avant de faire la vraie application mobile PWA).
