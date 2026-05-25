@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from fastapi import Response
-import pandas as pd  # <-- AJOUT : Pour régler l'avertissement des noms de colonnes de l'IA
+from fastapi.responses import RedirectResponse
+import pandas as pd
 
 app = FastAPI()
 
@@ -92,38 +93,27 @@ def obtenir_previsions(lat: float, lon: float):
     return donnees_finales
 
 # ==============================================================================
-# PROXY CHIRURGICAL SÉCURISÉ POUR LES CALQUES MÉTÉO
+# PROXY ULTRA-RAPIDE (REDIRECTION) : Finis les embouteillages et les erreurs 500 !
 # ==============================================================================
 @app.get("/cartes/{couche}/{z}/{x}/{y}")
 def obtenir_carte_meteo(couche: str, z: int, x: int, y: int, palette: str = None):
-    # 1. Récupération de la clé API secrète depuis Render [cite: 28]
-    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER") [cite: 29]
+    # 1. Récupération de la clé API secrète depuis Render
+    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER")
     
-    # 2. Nettoyage de sécurité au cas où l'URL de la couche contiendrait un résidu
+    # 2. Nettoyage de l'URL au cas où le navigateur rajouterait des paramètres
     nom_couche = couche.split('?')[0]
     
-    # 3. Construction de l'URL de base brute pour OpenWeatherMap [cite: 29]
-    url_owm = f"https://tile.openweathermap.org/map/{nom_couche}/{z}/{x}/{y}.png?appid={cle_owm}" [cite: 29]
+    # 3. Assemblage du lien final avec la clé
+    url_owm = f"https://tile.openweathermap.org/map/{nom_couche}/{z}/{x}/{y}.png?appid={cle_owm}"
     
-    # 4. Injection propre de la palette de couleurs si elle est détectée
+    # 4. Injection de la palette si présente
     if palette:
         url_owm += f"&palette={palette}"
-    elif "temp_new" in nom_couche:
-        # Sécurité : Si c'est la température et que la palette a été perdue en chemin, on en met une par défaut
+    elif "temp" in nom_couche:
         url_owm += "&palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000"
-    elif "wind_new" in nom_couche:
-        # Sécurité : Palette par défaut pour le vent
+    elif "wind" in nom_couche:
         url_owm += "&palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000"
 
-    try:
-        # Requête discrète vers OpenWeatherMap [cite: 29]
-        reponse = requests.get(url_owm) [cite: 29]
-        
-        # Log de secours pour voir la réponse réelle d'OpenWeatherMap dans ton panel Render
-        if reponse.status_code != 200:
-            print(f"⚠️ OWM rejeté (Code {reponse.status_code}). URL testée : {url_owm}")
-            
-        return Response(content=reponse.content, media_type="image/png") [cite: 29]
-    except Exception as e:
-        print(f"❌ Erreur Proxy Cartes : {e}") [cite: 30]
-        return Response(content=b"", status_code=500) [cite: 30]
+    # 5. L'ASTUCE MAGIQUE : On dit au navigateur d'aller chercher l'image lui-même !
+    # Le serveur Python se libère instantanément de la charge.
+    return RedirectResponse(url=url_owm)

@@ -61,23 +61,17 @@ async function chargerRadarPluie() {
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (Format Standardisé et Épuré) ---
-// 💡 On supprime les "?" de l'URL, on passe la palette uniquement dans les configurations !
+// --- COUCHES OPENWEATHERMAP (URLs pures) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.75, 
-    attribution: "Nuages © OWM" 
+    opacity: 0.75, attribution: "Nuages © OWM" 
 });
 
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
-    opacity: 0.85, 
-    attribution: "Vent © OWM",
-    palette: "0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000" // Stocké proprement ici
+    opacity: 0.85, attribution: "Vent © OWM" 
 });
 
 const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}`, {
-    opacity: 0.70,
-    attribution: "Température © OWM",
-    palette: "-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000" // Stocké proprement ici
+    opacity: 0.70, attribution: "Température © OWM"
 });
 
 // On les injecte toutes en tant que "BaseLayer" pour imposer le choix unique !
