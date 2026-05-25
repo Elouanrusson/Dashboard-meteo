@@ -92,27 +92,36 @@ def obtenir_previsions(lat: float, lon: float):
     return donnees_finales
 
 # ==============================================================================
-# PROXY UNIVERSEL CORRIGÉ : Découpage chirurgical des palettes de couleurs
+# PROXY CHIRURGICAL SÉCURISÉ POUR LES CALQUES MÉTÉO
 # ==============================================================================
 @app.get("/cartes/{couche}/{z}/{x}/{y}")
 def obtenir_carte_meteo(couche: str, z: int, x: int, y: int, palette: str = None):
+    # 1. Récupération de la clé API secrète depuis Render [cite: 28]
     cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER") [cite: 29]
     
-    # 1. On nettoie la variable couche au cas où un résidu de paramètre traînerait
+    # 2. Nettoyage de sécurité au cas où l'URL de la couche contiendrait un résidu
     nom_couche = couche.split('?')[0]
     
-    # 2. Construction de l'URL de base
+    # 3. Construction de l'URL de base brute pour OpenWeatherMap [cite: 29]
     url_owm = f"https://tile.openweathermap.org/map/{nom_couche}/{z}/{x}/{y}.png?appid={cle_owm}" [cite: 29]
     
-    # 3. Si une palette est présente (via le paramètre de requête automatique de FastAPI)
+    # 4. Injection propre de la palette de couleurs si elle est détectée
     if palette:
-        url_owm += f"&palette={palette}" [cite: 29]
-        
+        url_owm += f"&palette={palette}"
+    elif "temp_new" in nom_couche:
+        # Sécurité : Si c'est la température et que la palette a été perdue en chemin, on en met une par défaut
+        url_owm += "&palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000"
+    elif "wind_new" in nom_couche:
+        # Sécurité : Palette par défaut pour le vent
+        url_owm += "&palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000"
+
     try:
+        # Requête discrète vers OpenWeatherMap [cite: 29]
         reponse = requests.get(url_owm) [cite: 29]
-        # Si OpenWeatherMap renvoie une erreur, on l'affiche dans les logs de Render pour savoir pourquoi
+        
+        # Log de secours pour voir la réponse réelle d'OpenWeatherMap dans ton panel Render
         if reponse.status_code != 200:
-            print(f"⚠️ OWM a répondu avec un code {reponse.status_code} pour l'URL: {url_owm}")
+            print(f"⚠️ OWM rejeté (Code {reponse.status_code}). URL testée : {url_owm}")
             
         return Response(content=reponse.content, media_type="image/png") [cite: 29]
     except Exception as e:
