@@ -61,6 +61,91 @@ async function chargerRadarPluie() {
 chargerRadarPluie();
 
 // ==============================================================================
+// 4. BOUTON "ME LOCALISER" (Géolocalisation GPS)
+// ==============================================================================
+
+// On crée un bouton personnalisé dans le coin supérieur gauche de la carte
+const boutonGPS = L.control({ position: 'topleft' });
+
+boutonGPS.onAdd = function (map) {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    // On crée un bouton HTML blanc avec une icône cible
+    div.innerHTML = `
+        <button id="btn-gps" style="
+            background: white; 
+            border: none; 
+            width: 34px; 
+            height: 34px; 
+            cursor: pointer; 
+            font-size: 1.3em; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        " title="Me localiser">🎯</button>
+    `;
+    return div;
+};
+
+// On ajoute le bouton à la carte
+boutonGPS.addTo(carte);
+
+// Écouteur de clic sur notre nouveau bouton cible
+document.getElementById('btn-gps').addEventListener('click', function() {
+    // 🛡️ Vérification : est-ce que le navigateur gère le GPS ?
+    if (!navigator.geolocation) {
+        alert("Désolé, votre appareil ne supporte pas la géolocalisation.");
+        return;
+    }
+
+    // Petit effet visuel de chargement pendant que le GPS cherche le signal
+    const bouton = document.getElementById('btn-gps');
+    bouton.innerText = "⏳";
+
+    // On demande la position exacte au téléphone/PC
+    navigator.geolocation.getCurrentPosition(
+        async function (position) {
+            bouton.innerText = "🎯"; // On remet la cible
+            
+            // Extraction et arrondissement des coordonnées GPS
+            const lat = position.coords.latitude.toFixed(2);
+            const lon = position.coords.longitude.toFixed(2);
+
+            console.log(`📍 Position GPS détectée : Lat ${lat}, Lon ${lon}`);
+
+            // 1. On centre la carte sur l'utilisateur et on zoom
+            carte.setView([lat, lon], 10);
+
+            // 2. On place le marqueur dynamique à cet endroit
+            if (marqueurDynamique) {
+                carte.removeLayer(marqueurDynamique);
+            }
+            marqueurDynamique = L.marker([lat, lon]).addTo(carte)
+                .bindPopup(`<b>Vous êtes ici</b><br>Lat: ${lat}<br>Lon: ${lon}`).openPopup();
+
+            // 3. On interroge ton serveur Cloud de production (avec le cache buster)
+            try {
+                const rep = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}&t=${Date.now()}`);
+                const data = await rep.json();
+
+                // 4. On dessine le tableau extensible
+                dessinerTableau(data.hourly, "Ma Position (GPS)");
+
+            } catch (erreur) {
+                console.error("❌ Erreur lors de la récupération météo GPS :", erreur);
+            }
+        },
+        function (erreur) {
+            // En cas de refus du GPS par l'utilisateur ou de signal perdu
+            bouton.innerText = "🎯";
+            console.warn("Erreur GPS :", erreur.message);
+            alert("Impossible de vous localiser. Assurez-vous d'avoir autorisé le partage de position dans les réglages de votre appareil.");
+        }
+    );
+});
+
+// ==============================================================================
 // 3. AJOUT DES COUCHES OPENWEATHERMAP (Nuages & Vent)
 // ==============================================================================
 const cleAPI_OWM = "TA_CLE_API_ICI"; // ⚠️ Colle ta clé ici !
