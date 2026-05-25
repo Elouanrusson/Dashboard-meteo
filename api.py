@@ -4,11 +4,12 @@
 # ==============================================================================
 
 import joblib
-import os  # <-- AJOUT INDISPENSABLE : pour éviter le crash sur os.path
+import os 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from fastapi import Response
+import pandas as pd  # <-- AJOUT : Pour régler l'avertissement des noms de colonnes de l'IA
 
 app = FastAPI()
 
@@ -20,7 +21,7 @@ if os.path.exists("cerveau_rafales.pkl"):
 else:
     print("⚠️ Attention : fichier cerveau_rafales.pkl introuvable.")
 
-# SÉCURITÉ : Autorise ton navigateur web à communiquer avec cette API locale ou Cloud
+# SÉCURITÉ : Autorise ton navigateur web à communiquer avec cette API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -60,7 +61,7 @@ def obtenir_previsions(lat: float, lon: float):
         reponse_marine["hourly"].update(reponse_meteo.get("hourly", {}))
         donnees_finales = reponse_marine
     else:
-        # On est sur terre (ex: Toulouse) : on ne garde que la météo
+        # On est sur terre : on ne garde que la météo
         donnees_finales = reponse_meteo
 
     # 4. --- BRAIN GAIN : INTERVENTION DE L'INTELLIGENCE ARTIFICIELLE ---
@@ -71,41 +72,34 @@ def obtenir_previsions(lat: float, lon: float):
 
         # Si l'IA est bien chargée et qu'on a des données de vent
         if modele_ia and vitesses_vent:
-            # Scikit-Learn attend une structure en tableau 2D : [[v1], [v2], [v3]...]
-            X_entree = [[v] for v in vitesses_vent]
             try:
-                # Calcul de toutes les prédictions d'un seul coup
+                # CORRECTION UX : On crée un DataFrame avec le nom de colonne attendu par Scikit-Learn
+                X_entree = pd.DataFrame(vitesses_vent, columns=["wind_speed_10m"])
+                
+                # Calcul de toutes les prédictions d'un seul coup (sans Warning !)
                 predictions = modele_ia.predict(X_entree)
-                # On arrondit proprement chaque résultat à 1 décimale
                 rafales_ia = [round(float(p), 1) for p in predictions]
             except Exception as e:
                 print(f"❌ Erreur lors du calcul IA : {e}")
-                # En cas de bug de calcul, on met des valeurs nulles pour ne pas bloquer le site
                 rafales_ia = [None] * len(vitesses_vent)
         else:
-            # Si le fichier .pkl est manquant, on crée une liste vide sécurisée
             rafales_ia = [None] * len(vitesses_vent)
 
-        # On injecte notre nouvelle colonne IA dans le dictionnaire final !
+        # On injecte notre nouvelle colonne IA dans le dictionnaire final
         hourly_data["rafales_ia"] = rafales_ia
+
+    # CORRECTION CRUCIALE : Le retour des données est bien placé ICI, à la fin de la fonction !
+    return donnees_finales
+
 
 @app.get("/cartes/{couche}/{z}/{x}/{y}")
 def obtenir_carte_meteo(couche: str, z: int, x: int, y: int):
-    # Sécurité ultime : On récupère la clé depuis les variables d'environnement de Render.
-    # Si elle n'est pas configurée là-bas, il prendra ta clé écrite en dur ci-dessous.
     cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER")
-    
-    # Construction de l'URL secrète vers OpenWeatherMap
     url_owm = f"https://tile.openweathermap.org/map/{couche}/{z}/{x}/{y}.png?appid={cle_owm}"
     
     try:
-        # Ton serveur télécharge l'image discrètement
         reponse = requests.get(url_owm)
-        
-        # On renvoie l'image PNG brute au site web
         return Response(content=reponse.content, media_type="image/png")
     except Exception as e:
         print(f"❌ Erreur Proxy Cartes : {e}")
         return Response(content=b"", status_code=500)
-
-    return donnees_finales
