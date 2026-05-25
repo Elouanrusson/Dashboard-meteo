@@ -3,55 +3,47 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" SÉCURISÉ ---
+// --- PARTIE 1 : INITIALISATION STYLE VRAIE APP MÉTÉO (SÉCURISÉ & SANS ROUTES) ---
 
-// 1. Fond de carte Standard (On applique le filtre lissant en CSS)
-const fondAppleMeteo = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap',
-    className: 'carte-pure-claire'
+// 1. Fond style "Apple Météo Clair" (Silhouette des pays uniquement, sans routes ni étiquettes)
+const fondAppleMeteo = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap contributors, © CARTO'
 });
 
-// 2. Fond de carte Sombre Épuré (Inversion graphique)
-const fondSombre = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap',
-    className: 'carte-pure-sombre'
+// 2. Fond style "Apple Météo Sombre" (Mode Nuit tactique, sans routes ni étiquettes)
+const fondSombre = L.tileLayer('https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap contributors, © CARTO'
+});
+
+// 3. Les étiquettes (Noms des villes et pays) isolées.
+// 💡 Astuce de Pro : On les force à s'afficher dans le 'shadowPane' pour qu'elles passent 
+// PAR-DESSUS les radars de nuages ou de pluie ! La météo glisse ainsi derrière les textes.
+const etiquettesFrontieres = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    pane: 'shadowPane' 
 });
 
 const carte = L.map('ma-carte', {
     center: [46.60, 2.00], // Centré sur la France
     zoom: 5,
-    layers: [fondAppleMeteo] // Activé par défaut
+    layers: [fondAppleMeteo, etiquettesFrontieres] // On charge le fond clair + les textes au démarrage
 });
 
 let marqueurDynamique = null;
 
 // Menu des couches de base
 const couchesDeBase = { 
-    "🌤️ Style Épuré (Clair)": fondAppleMeteo,
-    "🌙 Style Épuré (Sombre)": fondSombre
+    "🌤️ Style Apple Météo (Clair)": fondAppleMeteo,
+    "🌙 Style Apple Météo (Sombre)": fondSombre
 };
-const couchesSuperposees = {}; 
+// On permet d'activer ou désactiver les noms des villes d'un clic
+const couchesSuperposees = {
+    "📌 Afficher les Villes": etiquettesFrontieres
+}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
-// --- 🎨 INJECTION DU STYLE "APPLE MÉTÉO" SANS CLÉ ---
-const styleMeteoStyle = document.createElement('style');
-styleMeteoStyle.innerHTML = `
-    /* Style Clair Épuré : atténue les tracés routiers pour laisser place à la météo */
-    .carte-pure-claire {
-        filter: saturate(0.6) brightness(1.05) contrast(0.9);
-    }
-    /* Style Sombre Épuré : rendu nuit épuré */
-    .carte-pure-sombre {
-        filter: invert(100%) hue-rotate(180deg) brightness(0.4) contrast(1.1) saturate(0.6);
-    }
-    /* Garde les couches radars et marqueurs intacts sans altération de couleur */
-    .leaflet-marker-pane, .leaflet-overlay-pane {
-        filter: none !important;
-    }
-`;
-document.head.appendChild(styleMeteoStyle);
 
 // --- RADAR DE PLUIE LISSÉ (RainViewer) ---
 async function chargerRadarPluie() {
@@ -60,27 +52,29 @@ async function chargerRadarPluie() {
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
         
-        // Mode '0' pour adoucir les contours des pixels de pluie
+        // Mode '/0/' (palette adoucie) pour un effet Heatmap continu sans pixels carrés
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
-            opacity: 0.75, 
+            opacity: 0.70, 
             attribution: "Radar © RainViewer"
         });
-        controleurDeCouches.addOverlay(radarPluie, "🌧️ Carte des Précipitations");
+        controleurDeCouches.addOverlay(radarPluie, "🌧️ Carte des Précipitations [Apple]");
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (Sécurisées via Proxy) ---
+
+// --- COUCHES OPENWEATHERMAP (Sécurisées via ton Proxy Render) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.8, 
+    opacity: 0.75, 
     attribution: "Nuages © OpenWeatherMap" 
 });
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
-    opacity: 0.75, 
+    opacity: 0.70, 
     attribution: "Vent © OpenWeatherMap" 
 });
-controleurDeCouches.addOverlay(radarNuages, "☁️ Carte des Nuages");
-controleurDeCouches.addOverlay(radarVent, "💨 Carte des Vents");
+controleurDeCouches.addOverlay(radarNuages, "☁️ Carte des Nuages [Apple]");
+controleurDeCouches.addOverlay(radarVent, "💨 Carte des Vents [Apple]");
+
 
 // --- 🎯 BOUTON GÉOLOCALISATION ---
 const boutonGPS = L.control({ position: 'topleft' });
