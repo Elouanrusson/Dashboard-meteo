@@ -91,15 +91,25 @@ def obtenir_previsions(lat: float, lon: float):
     # CORRECTION CRUCIALE : Le retour des données est bien placé ICI, à la fin de la fonction !
     return donnees_finales
 
-
+# ==============================================================================
+# PROXY SÉCURISÉ & UNIVERSEL : Supporte les nuages, les vents et les températures avec palettes !
+# ==============================================================================
 @app.get("/cartes/{couche}/{z}/{x}/{y}")
-def obtenir_carte_meteo(couche: str, z: int, x: int, y: int):
-    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER")
-    url_owm = f"https://tile.openweathermap.org/map/{couche}/{z}/{x}/{y}.png?appid={cle_owm}"
+def obtenir_carte_meteo(couche: str, z: int, x: int, y: int, palette: str = None):
+    # 1. Récupération sécurisée de la clé d'API
+    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER") [cite: 28, 29]
+    
+    # 2. Construction de l'URL de base pour la couche demandée
+    url_owm = f"https://tile.openweathermap.org/map/{couche}/{z}/{x}/{y}.png?appid={cle_owm}" [cite: 29]
+    
+    # 3. 💡 L'astuce : Si le fichier .js a envoyé une palette personnalisée, on l'ajoute proprement à l'URL !
+    if palette:
+        url_owm += f"&palette={palette}"
     
     try:
-        reponse = requests.get(url_owm)
-        return Response(content=reponse.content, media_type="image/png")
+        # Téléchargement discret de l'image de la carte thermique
+        reponse = requests.get(url_owm) [cite: 29]
+        return Response(content=reponse.content, media_type="image/png") [cite: 29]
     except Exception as e:
-        print(f"❌ Erreur Proxy Cartes : {e}")
-        return Response(content=b"", status_code=500)
+        print(f"❌ Erreur Proxy Cartes : {e}") [cite: 30]
+        return Response(content=b"", status_code=500) [cite: 30]

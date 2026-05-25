@@ -63,20 +63,19 @@ async function chargerRadarPluie() {
 chargerRadarPluie();
 
 
-// --- COUCHES OPENWEATHERMAP (Avec Gradient de Couleurs Augmenté 🎨) ---
+// --- COUCHES OPENWEATHERMAP (Format Pro avec paramètres d'URL distincts '?') ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
     opacity: 0.75, 
     attribution: "Nuages © OpenWeatherMap" 
 });
 
-// En ajoutant '&palette=0:0000ff;10:00ffff;20:00ff00;30:ffff00;40:ffa500;50:ff0000', 
-// on force l'API à colorer violemment le vent selon sa vitesse (km/h) !
-const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}&palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000`, { 
-    opacity: 0.85, // On augmente aussi légèrement l'opacité pour que ça ressorte mieux
+// 💡 Regarde le '?' juste avant palette : cela permet d'isoler proprement la variable !
+const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}?palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000`, { 
+    opacity: 0.85, 
     attribution: "Vent © OpenWeatherMap" 
 });
 
-const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}&palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000`, {
+const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}?palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000`, {
     opacity: 0.70,
     attribution: "Température © OpenWeatherMap"
 });
