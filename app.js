@@ -54,7 +54,7 @@ chargerRadarPluie();
 
 // --- COUCHES OPENWEATHERMAP (Opacité renforcée pour des couleurs denses) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.85, attribution: "OWM" 
+    opacity: 0.90, attribution: "OWM" 
 });
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
     opacity: 0.90, attribution: "OWM",
@@ -109,7 +109,7 @@ document.getElementById('btn-gps').addEventListener('click', function() {
 // GESTIONNAIRE DE FONDS DE CARTE AUTOMATIQUE
 // ==============================================================================
 carte.on('baselayerchange', function(evenement) {
-    if (evenement.name === "Vents" || evenement.name === "Températures") {
+    if (evenement.name === "Vents" || evenement.name === "Températures" || evenement.name === "Couverture Nuageuse" || evenement.name === "Précipitations") {
         if (carte.hasLayer(fondAppleMeteo)) carte.removeLayer(fondAppleMeteo);
         if (!carte.hasLayer(fondSombre)) carte.addLayer(fondSombre);
     } else {
@@ -199,9 +199,9 @@ document.getElementById('btn-recherche').addEventListener('click', async () => {
 // --- PARTIE 3 : LE TABLEAU INTELLIGENT (Design Professionnel) ---
 
 // Couleurs douces et pastel pour ne pas agresser l'œil
-function bgTemp(t) { return t < 15 ? '#e0f2fe' : t < 25 ? '#fef9c3' : '#fee2e2'; }
-function bgVent(v) { return v < 15 ? '#dcfce7' : v < 30 ? '#ffedd5' : '#fecaca'; }
-function couleurHoule(h) { return h < 1.0 ? '#bbf7d0' : h < 2.0 ? '#fef08a' : h < 3.0 ? '#fed7aa' : '#fca5a5'; }
+function bgTemp(t) { return t < 15 ? '#9ad7ff' : t < 25 ? '#fff47e' : '#ff8080'; }
+function bgVent(v) { return v < 15 ? '#94ffba' : v < 30 ? '#ffd7a4' : '#ffa0a0'; }
+function couleurHoule(h) { return h < 1.0 ? '#c7deff' : h < 2.0 ? '#77b2ff' : h < 3.0 ? '#1f64bd' : '#1a4684'; }
 
 let indexActuelGlobal = 0; 
 function genererCellule(donnee, couleurBg, indexCellule) {
