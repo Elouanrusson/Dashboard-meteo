@@ -143,7 +143,7 @@ function genererCellule(donnee, couleurBg, indexCellule) {
     return `<td class="data-cell" style="background-color: ${couleurBg}; ${styleActive}">${affichage}</td>`;
 }
 
-// Dessin final
+// Dessin final du tableau (Avec Alertes Météo Extrêmes)
 function dessinerTableau(hourlyData, nomDuSpot) {
     document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
     if (!hourlyData || !hourlyData.time) return;
@@ -164,6 +164,10 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     const indexFin = Math.min(hourlyData.time.length - 1, indexActuelGlobal + 24);
 
     let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
+    
+    // --- 🚨 NOUVELLE LIGNE ALERTE ---
+    let ligneAlerte = `<tr><td class="colonne-fixe" style="font-weight:bold; background:#fff1f2;">Alerte Météo</td>`;
+    
     let ligneTemp = `<tr><td class="colonne-fixe">Température (°C)</td>`;
     let ligneVent = `<tr><td class="colonne-fixe">Vent (km/h)</td>`;
     let ligneRafales = `<tr><td class="colonne-fixe">Rafales IA (km/h)</td>`;
@@ -179,6 +183,28 @@ function dessinerTableau(hourlyData, nomDuSpot) {
         const affichageHeure = estHeureActuelle ? `${heureTexte}<br><span style="font-size:0.6em; color:#facc15;">Maintenant</span>` : heureTexte;
         
         ligneHeures += `<td style="${styleH}">${affichageHeure}</td>`;
+        
+        // --- ⚡ LOGIQUE EXTRÊME (Orages & Tempêtes) ---
+        let texteAlerte = "-";
+        let bgAlerte = "transparent";
+        
+        // On sécurise au cas où l'API n'enverrait pas la donnée (ex: bug d'Open-Meteo)
+        const valCape = (hourlyData.cape && hourlyData.cape[i] !== null) ? hourlyData.cape[i] : 0;
+        const valRafales = (hourlyData.rafales_ia && hourlyData.rafales_ia[i] !== null) ? hourlyData.rafales_ia[i] : 0;
+
+        if (valCape > 1500) {
+            texteAlerte = "⚡ Orage Violent"; bgAlerte = "#ef4444"; // Rouge
+        } else if (valCape > 1000) {
+            texteAlerte = "🌩️ Risque Orage"; bgAlerte = "#f97316"; // Orange
+        } else if (valRafales > 90) {
+            texteAlerte = "🌪️ Tempête"; bgAlerte = "#ef4444"; // Rouge
+        } else if (valRafales > 70) {
+            texteAlerte = "⚠️ Coup de Vent"; bgAlerte = "#eab308"; // Jaune
+        }
+        
+        ligneAlerte += genererCellule(texteAlerte, bgAlerte, i);
+        // ---------------------------------------------
+
         ligneTemp += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
         ligneVent += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
         ligneRafales += genererCellule(hourlyData.rafales_ia[i], bgVent(hourlyData.rafales_ia[i]), i);
@@ -190,8 +216,10 @@ function dessinerTableau(hourlyData, nomDuSpot) {
         }
     }
     
-    let htmlFinal = ligneHeures + "</tr>" + ligneTemp + "</tr>" + ligneVent + "</tr>" + ligneRafales + "</tr>";
+    // Assemblage final avec la nouvelle ligne !
+    let htmlFinal = ligneHeures + "</tr>" + ligneAlerte + "</tr>" + ligneTemp + "</tr>" + ligneVent + "</tr>" + ligneRafales + "</tr>";
     if (estMarin) { htmlFinal += ligneHoule + "</tr>" + ligneDirHoule + "</tr>" + ligneCourant + "</tr>"; }
+    
     document.getElementById('windguru-body').innerHTML = htmlFinal;
 }
 
