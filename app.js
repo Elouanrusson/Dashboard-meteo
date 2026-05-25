@@ -3,27 +3,22 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE AUTOMATIQUE "APPLE MÉTÉO" ---
+// --- PARTIE 1 : INITIALISATION STYLE PROFESSIONNEL ---
 
-// 1. Fond Clair Épuré (Idéal pour : Nuages et Précipitations)
 const fondAppleMeteo = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '© OpenStreetMap, © CARTO'
+    maxZoom: 20, attribution: '© OpenStreetMap, © CARTO'
 });
 
-// 2. Fond Sombre Épuré (Idéal pour : Vents et Températures)
 const fondSombre = L.tileLayer('https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '© OpenStreetMap, © CARTO'
+    maxZoom: 20, attribution: '© OpenStreetMap, © CARTO'
 });
 
-// 3. Les textes des villes (Placés au premier plan)
+// Calque supérieur : Textes, frontières et repères géographiques (S'affiche AU-DESSUS de la météo)
 const etiquettesFrontieres = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
     pane: 'shadowPane' 
 });
 
-// Au démarrage, on charge le fond clair et les textes
 const carte = L.map('ma-carte', {
     center: [46.60, 2.00], 
     zoom: 5,
@@ -32,19 +27,17 @@ const carte = L.map('ma-carte', {
 
 let marqueurDynamique = null;
 
-// --- CONFIGURATION DU MENU UNIQUE STYLE APPLE ---
-// Pour imiter Apple, on va mettre la météo dans les "Couches de Base" (Boutons radios). 
-// Comme ça, l'utilisateur ne peut en choisir QU'UNE SEULE à la fois !
+// Textes sobres pour le menu
 const couchesDeBase = { 
-    "🗺️ Carte Vierge (Sans météo)": fondAppleMeteo
+    "Carte Vierge": fondAppleMeteo
 };
 const couchesSuperposees = {
-    "📌 Afficher les Villes": etiquettesFrontieres
+    "Afficher les repères": etiquettesFrontieres
 }; 
 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
-// --- RADAR DE PLUIE (RainViewer) ---
+// --- RADAR DE PLUIE ---
 async function chargerRadarPluie() {
     try {
         const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
@@ -52,63 +45,83 @@ async function chargerRadarPluie() {
         const derniereImage = data.radar.past[data.radar.past.length - 1];
         
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
-            opacity: 0.70, attribution: "Radar © RainViewer"
+            opacity: 0.85, attribution: "RainViewer"
         });
-        
-        // Ajout en choix unique
-        controleurDeCouches.addBaseLayer(radarPluie, "🌧️ Précipitations");
+        controleurDeCouches.addBaseLayer(radarPluie, "Précipitations");
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (URLs pures) ---
+// --- COUCHES OPENWEATHERMAP (Opacité renforcée pour des couleurs denses) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.75, attribution: "Nuages © OWM" 
+    opacity: 0.85, attribution: "OWM" 
 });
-
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
-    opacity: 0.85, attribution: "Vent © OWM" 
+    opacity: 0.90, attribution: "OWM",
+    palette: "0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000" 
 });
-
 const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}`, {
-    opacity: 0.70, attribution: "Température © OWM"
+    opacity: 0.90, // <-- Opacité très forte, car les repères s'afficheront par-dessus
+    attribution: "OWM",
+    palette: "-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000"
 });
 
-// On les injecte toutes en tant que "BaseLayer" pour imposer le choix unique !
-controleurDeCouches.addBaseLayer(radarNuages, "☁️ Nuages");
-controleurDeCouches.addBaseLayer(radarVent, "💨 Vents Vectoriels");
-controleurDeCouches.addBaseLayer(radarTemp, "🌡️ Températures Thermiques");
+controleurDeCouches.addBaseLayer(radarNuages, "Couverture Nuageuse");
+controleurDeCouches.addBaseLayer(radarVent, "Vents");
+controleurDeCouches.addBaseLayer(radarTemp, "Températures");
 
+
+// --- BOUTON GÉOLOCALISATION (Design Premium SVG) ---
+const boutonGPS = L.control({ position: 'topleft' });
+boutonGPS.onAdd = function () {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    // Remplacement du smiley par une icône SVG propre dans un bouton type "Verre fumé"
+    div.innerHTML = `<button id="btn-gps" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.15); width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);" title="Me localiser">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M2 12h2"></path><path d="M20 12h2"></path>
+        </svg>
+    </button>`;
+    return div;
+};
+boutonGPS.addTo(carte);
+
+document.getElementById('btn-gps').addEventListener('click', function() {
+    if (!navigator.geolocation) return alert("Géolocalisation non supportée.");
+    const bouton = document.getElementById('btn-gps');
+    bouton.style.opacity = "0.5"; // Effet de chargement visuel
+    
+    navigator.geolocation.getCurrentPosition(
+        function (position) {
+            bouton.style.opacity = "1";
+            const lat = position.coords.latitude.toFixed(2);
+            const lon = position.coords.longitude.toFixed(2);
+            carte.setView([lat, lon], 10);
+            if (marqueurDynamique) carte.removeLayer(marqueurDynamique);
+            marqueurDynamique = L.marker([lat, lon]).addTo(carte).bindPopup(`<b>Ma Position</b>`).openPopup();
+            chargerMeteo(lat, lon, "Ma Position (GPS)");
+        },
+        function () { bouton.style.opacity = "1"; alert("Erreur GPS ou permission refusée."); }
+    );
+});
 
 // ==============================================================================
-// 🧠 L'INTELLIGENCE APPLE MÉTÉO : Changement de fond automatique !
+// GESTIONNAIRE DE FONDS DE CARTE AUTOMATIQUE
 // ==============================================================================
 carte.on('baselayerchange', function(evenement) {
-    // Si l'utilisateur choisit le Vent ou la Température -> On force le Mode Sombre
-    if (evenement.name === "💨 Vents Vectoriels" || evenement.name === "🌡️ Températures Thermiques") {
+    if (evenement.name === "Vents" || evenement.name === "Températures") {
         if (carte.hasLayer(fondAppleMeteo)) carte.removeLayer(fondAppleMeteo);
         if (!carte.hasLayer(fondSombre)) carte.addLayer(fondSombre);
-    } 
-    // Si l'utilisateur choisit les Nuages, la Pluie ou la carte vierge -> On force le Mode Clair
-    else {
+    } else {
         if (carte.hasLayer(fondSombre)) carte.removeLayer(fondSombre);
         if (!carte.hasLayer(fondAppleMeteo)) carte.addLayer(fondAppleMeteo);
     }
     
-    // Astuce cruciale : on remet toujours les textes des villes au premier plan après la bascule
+    // On force les textes et frontières à rester au-dessus de la nouvelle couche
     if (carte.hasLayer(etiquettesFrontieres)) {
         etiquettesFrontieres.bringToFront();
     }
 });
-
-// --- 🎯 BOUTON GÉOLOCALISATION ---
-const boutonGPS = L.control({ position: 'topleft' });
-boutonGPS.onAdd = function () {
-    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-    div.innerHTML = `<button id="btn-gps" style="background: white; border: none; width: 34px; height: 34px; cursor: pointer; font-size: 1.3em; display: flex; align-items: center; justify-content: center; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,0.4);" title="Me localiser">🎯</button>`;
-    return div;
-};
-boutonGPS.addTo(carte);
 
 document.getElementById('btn-gps').addEventListener('click', function() {
     if (!navigator.geolocation) return alert("Géolocalisation non supportée par votre appareil.");
