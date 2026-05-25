@@ -37,10 +37,18 @@ async function chargerRadarPluie() {
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP ---
-const cleAPI_OWM = "94a9f023c9924d60570d9fa95b3982bf"; // ⚠️ REMETS TA CLÉ API ICI ! ⚠️
-const radarNuages = L.tileLayer(`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${cleAPI_OWM}`, { opacity: 0.7, attribution: "Nuages © OWM" });
-const radarVent = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${cleAPI_OWM}`, { opacity: 0.6, attribution: "Vent © OWM" });
+// --- COUCHES OPENWEATHERMAP (Sécurisées via ton Proxy Python) ---
+const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
+    opacity: 0.7, 
+    attribution: "Nuages © OpenWeatherMap" 
+});
+
+const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
+    opacity: 0.6, 
+    attribution: "Vent © OpenWeatherMap" 
+});
+
+// On ajoute ces deux couches sécurisées au menu en haut à droite
 controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
 controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
 

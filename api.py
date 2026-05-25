@@ -8,6 +8,7 @@ import os  # <-- AJOUT INDISPENSABLE : pour éviter le crash sur os.path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+from fastapi import Response
 
 app = FastAPI()
 
@@ -87,5 +88,24 @@ def obtenir_previsions(lat: float, lon: float):
 
         # On injecte notre nouvelle colonne IA dans le dictionnaire final !
         hourly_data["rafales_ia"] = rafales_ia
+
+@app.get("/cartes/{couche}/{z}/{x}/{y}")
+def obtenir_carte_meteo(couche: str, z: int, x: int, y: int):
+    # Sécurité ultime : On récupère la clé depuis les variables d'environnement de Render.
+    # Si elle n'est pas configurée là-bas, il prendra ta clé écrite en dur ci-dessous.
+    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER")
+    
+    # Construction de l'URL secrète vers OpenWeatherMap
+    url_owm = f"https://tile.openweathermap.org/map/{couche}/{z}/{x}/{y}.png?appid={cle_owm}"
+    
+    try:
+        # Ton serveur télécharge l'image discrètement
+        reponse = requests.get(url_owm)
+        
+        # On renvoie l'image PNG brute au site web
+        return Response(content=reponse.content, media_type="image/png")
+    except Exception as e:
+        print(f"❌ Erreur Proxy Cartes : {e}")
+        return Response(content=b"", status_code=500)
 
     return donnees_finales
