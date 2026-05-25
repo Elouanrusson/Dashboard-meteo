@@ -92,23 +92,28 @@ def obtenir_previsions(lat: float, lon: float):
     return donnees_finales
 
 # ==============================================================================
-# PROXY SÉCURISÉ & UNIVERSEL : Supporte les nuages, les vents et les températures avec palettes !
+# PROXY UNIVERSEL CORRIGÉ : Découpage chirurgical des palettes de couleurs
 # ==============================================================================
 @app.get("/cartes/{couche}/{z}/{x}/{y}")
 def obtenir_carte_meteo(couche: str, z: int, x: int, y: int, palette: str = None):
-    # 1. Récupération sécurisée de la clé d'API
-    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER") [cite: 28, 29]
+    cle_owm = os.getenv("OPENWEATHERMAP_API_KEY", "CLE_SECRETE_SUR_RENDER") [cite: 29]
     
-    # 2. Construction de l'URL de base pour la couche demandée
-    url_owm = f"https://tile.openweathermap.org/map/{couche}/{z}/{x}/{y}.png?appid={cle_owm}" [cite: 29]
+    # 1. On nettoie la variable couche au cas où un résidu de paramètre traînerait
+    nom_couche = couche.split('?')[0]
     
-    # 3. 💡 L'astuce : Si le fichier .js a envoyé une palette personnalisée, on l'ajoute proprement à l'URL !
+    # 2. Construction de l'URL de base
+    url_owm = f"https://tile.openweathermap.org/map/{nom_couche}/{z}/{x}/{y}.png?appid={cle_owm}" [cite: 29]
+    
+    # 3. Si une palette est présente (via le paramètre de requête automatique de FastAPI)
     if palette:
-        url_owm += f"&palette={palette}"
-    
+        url_owm += f"&palette={palette}" [cite: 29]
+        
     try:
-        # Téléchargement discret de l'image de la carte thermique
         reponse = requests.get(url_owm) [cite: 29]
+        # Si OpenWeatherMap renvoie une erreur, on l'affiche dans les logs de Render pour savoir pourquoi
+        if reponse.status_code != 200:
+            print(f"⚠️ OWM a répondu avec un code {reponse.status_code} pour l'URL: {url_owm}")
+            
         return Response(content=reponse.content, media_type="image/png") [cite: 29]
     except Exception as e:
         print(f"❌ Erreur Proxy Cartes : {e}") [cite: 30]

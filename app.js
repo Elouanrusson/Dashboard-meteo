@@ -60,16 +60,23 @@ async function chargerRadarPluie() {
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
-
-// --- COUCHES OPENWEATHERMAP PROXY ---
+// --- COUCHES OPENWEATHERMAP (Format Robuste et Segmenté) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.75, attribution: "Nuages © OWM" 
+    opacity: 0.75, 
+    attribution: "Nuages © OWM" 
 });
-const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}?palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000`, { 
-    opacity: 0.85, attribution: "Vent © OWM" 
+
+// On passe la palette dans les configurations secondaires, Leaflet va la gérer proprement !
+const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}?palette={maPalette}`, { 
+    opacity: 0.85, 
+    attribution: "Vent © OWM",
+    maPalette: "0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000" // Injection propre
 });
-const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}?palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000`, {
-    opacity: 0.70, attribution: "Température © OWM"
+
+const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}?palette={maPalette}`, {
+    opacity: 0.70,
+    attribution: "Température © OWM",
+    maPalette: "-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000" // Injection propre
 });
 
 // On les injecte toutes en tant que "BaseLayer" pour imposer le choix unique !
