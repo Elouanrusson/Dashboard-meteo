@@ -199,8 +199,28 @@ document.getElementById('btn-recherche').addEventListener('click', async () => {
 // --- PARTIE 3 : LE TABLEAU INTELLIGENT (Design Professionnel) ---
 
 // Couleurs douces et pastel pour ne pas agresser l'œil
-function bgTemp(t) { return t < 15 ? '#9ad7ff' : t < 25 ? '#fff47e' : '#ff8080'; }
-function bgVent(v) { return v < 15 ? '#94ffba' : v < 30 ? '#ffd7a4' : '#ffa0a0'; }
+// --- PARTIE 3 : LE TABLEAU INTELLIGENT (Design Professionnel) ---
+
+// Gradient thermique fluide calculé mathématiquement (Format HSL)
+function bgTemp(t) { 
+    // 1. On bloque la température de référence entre -5°C et 35°C 
+    // (pour éviter que ça devienne violet ou noir dans les extrêmes)
+    const minTemp = -5;
+    const maxTemp = 35;
+    const tempBornee = Math.max(minTemp, Math.min(maxTemp, t));
+
+    // 2. On calcule le pourcentage de chaleur (0 = très froid, 1 = très chaud)
+    const pourcentage = (tempBornee - minTemp) / (maxTemp - minTemp);
+
+    // 3. On déduit la teinte : on part de 240 (Bleu) et on soustrait pour aller vers 0 (Rouge)
+    const hue = 240 - (pourcentage * 240);
+
+    // 4. On renvoie une couleur HSL très douce (Saturation 85%, Luminosité 85%) 
+    // pour que le texte noir reste parfaitement lisible par-dessus !
+    return `hsl(${hue}, 85%, 85%)`; 
+}
+
+function bgVent(v) { return v < 15 ? '#dcfce7' : v < 30 ? '#ffedd5' : '#fecaca'; }
 function couleurHoule(h) { return h < 1.0 ? '#c7deff' : h < 2.0 ? '#77b2ff' : h < 3.0 ? '#1f64bd' : '#1a4684'; }
 
 let indexActuelGlobal = 0; 
