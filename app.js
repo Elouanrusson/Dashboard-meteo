@@ -3,86 +3,101 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE VRAIE APP MÉTÉO (SÉCURISÉ & SANS ROUTES) ---
+// --- PARTIE 1 : INITIALISATION STYLE AUTOMATIQUE "APPLE MÉTÉO" ---
 
-// 1. Fond style "Apple Météo Clair" (Silhouette des pays uniquement, sans routes ni étiquettes)
+// 1. Fond Clair Épuré (Idéal pour : Nuages et Précipitations)
 const fondAppleMeteo = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© OpenStreetMap contributors, © CARTO'
+    attribution: '© OpenStreetMap, © CARTO'
 });
 
-// 2. Fond style "Apple Météo Sombre" (Mode Nuit tactique, sans routes ni étiquettes)
+// 2. Fond Sombre Épuré (Idéal pour : Vents et Températures)
 const fondSombre = L.tileLayer('https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© OpenStreetMap contributors, © CARTO'
+    attribution: '© OpenStreetMap, © CARTO'
 });
 
-// 3. Les étiquettes (Noms des villes et pays) isolées.
-// 💡 Astuce de Pro : On les force à s'afficher dans le 'shadowPane' pour qu'elles passent 
-// PAR-DESSUS les radars de nuages ou de pluie ! La météo glisse ainsi derrière les textes.
+// 3. Les textes des villes (Placés au premier plan)
 const etiquettesFrontieres = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
     pane: 'shadowPane' 
 });
 
+// Au démarrage, on charge le fond clair et les textes
 const carte = L.map('ma-carte', {
-    center: [46.60, 2.00], // Centré sur la France
+    center: [46.60, 2.00], 
     zoom: 5,
-    layers: [fondAppleMeteo, etiquettesFrontieres] // On charge le fond clair + les textes au démarrage
+    layers: [fondAppleMeteo, etiquettesFrontieres] 
 });
 
 let marqueurDynamique = null;
 
-// Menu des couches de base
+// --- CONFIGURATION DU MENU UNIQUE STYLE APPLE ---
+// Pour imiter Apple, on va mettre la météo dans les "Couches de Base" (Boutons radios). 
+// Comme ça, l'utilisateur ne peut en choisir QU'UNE SEULE à la fois !
 const couchesDeBase = { 
-    "🌤️ Style Apple Météo (Clair)": fondAppleMeteo,
-    "🌙 Style Apple Météo (Sombre)": fondSombre
+    "🗺️ Carte Vierge (Sans météo)": fondAppleMeteo
 };
-// On permet d'activer ou désactiver les noms des villes d'un clic
 const couchesSuperposees = {
     "📌 Afficher les Villes": etiquettesFrontieres
 }; 
+
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
-
-// --- RADAR DE PLUIE LISSÉ (RainViewer) ---
+// --- RADAR DE PLUIE (RainViewer) ---
 async function chargerRadarPluie() {
     try {
         const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
         
-        // Mode '/0/' (palette adoucie) pour un effet Heatmap continu sans pixels carrés
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
-            opacity: 0.70, 
-            attribution: "Radar © RainViewer"
+            opacity: 0.70, attribution: "Radar © RainViewer"
         });
-        controleurDeCouches.addOverlay(radarPluie, "🌧️ Carte des Précipitations [Apple]");
+        
+        // Ajout en choix unique
+        controleurDeCouches.addBaseLayer(radarPluie, "🌧️ Précipitations");
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
 
-
-// --- COUCHES OPENWEATHERMAP (Format Pro avec paramètres d'URL distincts '?') ---
+// --- COUCHES OPENWEATHERMAP PROXY ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.75, 
-    attribution: "Nuages © OpenWeatherMap" 
+    opacity: 0.75, attribution: "Nuages © OWM" 
 });
-
-// 💡 Regarde le '?' juste avant palette : cela permet d'isoler proprement la variable !
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}?palette=0:0000ff;5:00ffff;15:00ff00;25:ffff00;40:ffa500;60:ff0000`, { 
-    opacity: 0.85, 
-    attribution: "Vent © OpenWeatherMap" 
+    opacity: 0.85, attribution: "Vent © OWM" 
 });
-
 const radarTemp = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/temp_new/{z}/{x}/{y}?palette=-10:800080;0:0000ff;10:00ffff;20:00ff00;30:ffff00;35:ffa500;40:ff0000`, {
-    opacity: 0.70,
-    attribution: "Température © OpenWeatherMap"
+    opacity: 0.70, attribution: "Température © OWM"
 });
 
-controleurDeCouches.addOverlay(radarNuages, "☁️ Carte des Nuages [Apple]");
-controleurDeCouches.addOverlay(radarVent, "💨 Carte des Vents [Apple]");
-controleurDeCouches.addOverlay(radarTemp, "🌡️ Carte des Températures [Apple]");
+// On les injecte toutes en tant que "BaseLayer" pour imposer le choix unique !
+controleurDeCouches.addBaseLayer(radarNuages, "☁️ Nuages");
+controleurDeCouches.addBaseLayer(radarVent, "💨 Vents Vectoriels");
+controleurDeCouches.addBaseLayer(radarTemp, "🌡️ Températures Thermiques");
+
+
+// ==============================================================================
+// 🧠 L'INTELLIGENCE APPLE MÉTÉO : Changement de fond automatique !
+// ==============================================================================
+carte.on('baselayerchange', function(evenement) {
+    // Si l'utilisateur choisit le Vent ou la Température -> On force le Mode Sombre
+    if (evenement.name === "💨 Vents Vectoriels" || evenement.name === "🌡️ Températures Thermiques") {
+        if (carte.hasLayer(fondAppleMeteo)) carte.removeLayer(fondAppleMeteo);
+        if (!carte.hasLayer(fondSombre)) carte.addLayer(fondSombre);
+    } 
+    // Si l'utilisateur choisit les Nuages, la Pluie ou la carte vierge -> On force le Mode Clair
+    else {
+        if (carte.hasLayer(fondSombre)) carte.removeLayer(fondSombre);
+        if (!carte.hasLayer(fondAppleMeteo)) carte.addLayer(fondAppleMeteo);
+    }
+    
+    // Astuce cruciale : on remet toujours les textes des villes au premier plan après la bascule
+    if (carte.hasLayer(etiquettesFrontieres)) {
+        etiquettesFrontieres.bringToFront();
+    }
+});
 
 // --- 🎯 BOUTON GÉOLOCALISATION ---
 const boutonGPS = L.control({ position: 'topleft' });
