@@ -3,31 +3,31 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" ---
+// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" SÉCURISÉ ---
 
-// 1. Le fond style "Apple Météo" (Ultra-épuré, presque invisible, sans routes)
-// Idéal pour que seules les couleurs de la météo habillent la carte
-const fondAppleMeteo = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+// 1. Fond de carte Clair Épuré (Sans routes, parfait pour la météo)
+const fondAppleMeteo = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© CARTO'
+    attribution: '© Stadia Maps, © OpenStreetMap'
 });
 
-// 2. Le fond Sombre Météo (Pour le mode nuit d'Apple)
-const fondSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+// 2. Fond de carte Sombre Épuré (Mode Nuit)
+const fondSombre = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© CARTO'
+    attribution: '© Stadia Maps, © OpenStreetMap'
 });
 
-// 3. Les étiquettes (Villes/Pays) qu'on affichera PAR-DESSUS la météo pour que les noms restent lisibles !
-const etiquettesFrontieres = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    pane: 'shadowPane' // Force l'affichage au-dessus des radars météo
+// 3. Les étiquettes des villes qui s'affichent PAR-DESSUS la météo
+const etiquettesFrontieres = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    opacity: 0.0, // On cache le fond de cette carte...
+    pane: 'shadowPane' // ...mais Leaflet va forcer ses textes à passer au-dessus des radars !
 });
 
 const carte = L.map('ma-carte', {
     center: [46.60, 2.00], // Centré sur la France
     zoom: 5,
-    layers: [fondAppleMeteo, etiquettesFrontieres] // Activés par défaut
+    layers: [fondAppleMeteo] // Activé par défaut
 });
 
 let marqueurDynamique = null;
@@ -37,9 +37,7 @@ const couchesDeBase = {
     "🌤️ Style Apple Météo (Clair)": fondAppleMeteo,
     "🌙 Style Apple Météo (Sombre)": fondSombre
 };
-const couchesSuperposees = {
-    "📌 Noms des Villes": etiquettesFrontieres
-}; 
+const couchesSuperposees = {}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
 // --- RADAR DE PLUIE LISSÉ (RainViewer) ---
@@ -49,7 +47,6 @@ async function chargerRadarPluie() {
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
         
-        // Option 'smooth' (1) et palette '0' (style Apple/Windy) pour un rendu fluide sans pixel
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
             opacity: 0.75, 
             attribution: "Radar © RainViewer"
@@ -59,7 +56,7 @@ async function chargerRadarPluie() {
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (Sécurisées + Rendu Continu) ---
+// --- COUCHES OPENWEATHERMAP (Sécurisées via Proxy) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
     opacity: 0.8, 
     attribution: "Nuages © OpenWeatherMap" 
