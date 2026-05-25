@@ -85,13 +85,34 @@ document.getElementById('btn-gps').addEventListener('click', function() {
 
 // --- PARTIE 2 : INTERACTIONS (Clic & Recherche) ---
 
-// Unification de l'appel au serveur Python
+// Unification de l'appel au serveur Python (AVEC BOUCLIER ANTI-CRASH 🛡️)
 async function chargerMeteo(lat, lon, nomDuSpot) {
     try {
         const rep = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}&t=${Date.now()}`);
+        
+        // 1. Vérification : est-ce que le serveur a renvoyé une erreur (ex: 500) ?
+        if (!rep.ok) {
+            throw new Error(`Le serveur a renvoyé une erreur HTTP ${rep.status}`);
+        }
+
         const data = await rep.json();
+        
+        // 2. Affichage dans la console F12 pour nous aider à déboguer
+        console.log(`📡 Réponse du serveur pour ${nomDuSpot} :`, data);
+
+        // 3. Le Bouclier : on vérifie que "data" n'est pas nul et contient bien "hourly"
+        if (!data || !data.hourly) {
+            console.warn("⚠️ Données incomplètes ou nulles reçues du serveur !");
+            alert(`Météo indisponible pour ce point : ${nomDuSpot}.`);
+            return; // On arrête la fonction ici, on ne dessine pas le tableau.
+        }
+
+        // Si tout va bien, on dessine le tableau !
         dessinerTableau(data.hourly, nomDuSpot);
-    } catch (erreur) { console.error("Erreur API Météo:", erreur); }
+
+    } catch (erreur) { 
+        console.error("❌ Erreur API Météo:", erreur); 
+    }
 }
 
 // Clic sur la carte
