@@ -5,21 +5,31 @@
 
 // --- PARTIE 1 : INITIALISATION DE LA CARTE ---
 
+// 1. Fond de carte Standard (Lumineux)
 const fondOpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
 });
 
+// 2. NOUVEAU : Fond de carte Sombre Pro (Idéal pour faire ressortir la météo !)
+const fondSombre = L.tileLayer('https://{s}.tile.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap, © CARTO'
+});
+
 const carte = L.map('ma-carte', {
     center: [46.60, 2.00], // Centré sur la France
     zoom: 5,
-    layers: [fondOpenStreetMap]
+    layers: [fondSombre] // On charge le mode sombre par défaut pour le style météo
 });
 
 let marqueurDynamique = null;
 
-// Menu des couches
-const couchesDeBase = { "Carte Standard": fondOpenStreetMap };
+// Menu des couches de base (L'utilisateur peut maintenant choisir son style de carte)
+const couchesDeBase = { 
+    "🖤 Mode Sombre Météo": fondSombre,
+    "🗺️ Carte Standard": fondOpenStreetMap 
+};
 const couchesSuperposees = {}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
@@ -29,59 +39,30 @@ async function chargerRadarPluie() {
         const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
+        // Opacité poussée à 0.85 pour que la pluie soit bien visible
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-            opacity: 0.6, attribution: "Radar © RainViewer"
+            opacity: 0.85, 
+            attribution: "Radar © RainViewer"
         });
         controleurDeCouches.addOverlay(radarPluie, "🌧️ Radar de Précipitations");
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (Sécurisées via ton Proxy Python) ---
+// --- COUCHES OPENWEATHERMAP (Sécurisées via Proxy + Opacité Maximale 💪) ---
+// On pousse l'opacité à 0.95 (presque opaque) pour voir parfaitement les zones
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.7, 
+    opacity: 0.95, 
     attribution: "Nuages © OpenWeatherMap" 
 });
 
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
-    opacity: 0.6, 
+    opacity: 0.95, 
     attribution: "Vent © OpenWeatherMap" 
 });
 
-// On ajoute ces deux couches sécurisées au menu en haut à droite
 controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
 controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
-
-// --- BOUTON GÉOLOCALISATION ---
-const boutonGPS = L.control({ position: 'topleft' });
-boutonGPS.onAdd = function () {
-    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-    div.innerHTML = `<button id="btn-gps" style="background: white; border: none; width: 34px; height: 34px; cursor: pointer; font-size: 1.3em; display: flex; align-items: center; justify-content: center; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,0.4);" title="Me localiser">🎯</button>`;
-    return div;
-};
-boutonGPS.addTo(carte);
-
-document.getElementById('btn-gps').addEventListener('click', function() {
-    if (!navigator.geolocation) return alert("Géolocalisation non supportée par votre appareil.");
-    
-    const bouton = document.getElementById('btn-gps');
-    bouton.innerText = "⏳";
-    
-    navigator.geolocation.getCurrentPosition(
-        function (position) {
-            bouton.innerText = "🎯";
-            const lat = position.coords.latitude.toFixed(2);
-            const lon = position.coords.longitude.toFixed(2);
-            
-            carte.setView([lat, lon], 10);
-            if (marqueurDynamique) carte.removeLayer(marqueurDynamique);
-            marqueurDynamique = L.marker([lat, lon]).addTo(carte).bindPopup(`<b>Ma Position</b>`).openPopup();
-            
-            chargerMeteo(lat, lon, "Ma Position (GPS)");
-        },
-        function () { bouton.innerText = "🎯"; alert("Erreur GPS ou permission refusée."); }
-    );
-});
 
 // --- PARTIE 2 : INTERACTIONS (Clic & Recherche) ---
 
