@@ -1,22 +1,22 @@
 // ==============================================================================
-// DESTINATION : app.js (Version Pro Finalisée & Corrigée)
+// DESTINATION : app.js (Version Pure Apple Météo - Fix Complet SSL & CORS)
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE SÉCURISÉ & GRATUIT ---
+// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" SÉCURISÉ ---
 
-// 1. Fond de carte Standard (On va le lisser en CSS)
+// 1. Fond de carte Standard (On applique le filtre lissant en CSS)
 const fondAppleMeteo = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap',
-    className: 'carte-pure-claire' // <-- Classe personnalisée pour notre CSS
+    className: 'carte-pure-claire'
 });
 
-// 2. Fond de carte Sombre (Généré proprement sans clé API externe)
+// 2. Fond de carte Sombre Épuré (Inversion graphique)
 const fondSombre = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap',
-    className: 'carte-pure-sombre' // <-- Classe personnalisée pour notre CSS
+    className: 'carte-pure-sombre'
 });
 
 const carte = L.map('ma-carte', {
@@ -35,25 +35,24 @@ const couchesDeBase = {
 const couchesSuperposees = {}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
-// --- 🎨 INJECTION DU STYLE "APPLE MÉTÉO" SANS CLÉ API ---
-// On crée un petit bloc de style CSS à la volée pour adoucir la carte OpenStreetMap
-// et simuler le rendu Apple Météo (Muted) et le mode sombre parfait.
+// --- 🎨 INJECTION DU STYLE "APPLE MÉTÉO" SANS CLÉ ---
 const styleMeteoStyle = document.createElement('style');
 styleMeteoStyle.innerHTML = `
-    /* Style Clair Épuré : On diminue la saturation et on augmente la luminosité pour effacer visuellement les routes agressives */
+    /* Style Clair Épuré : atténue les tracés routiers pour laisser place à la météo */
     .carte-pure-claire {
-        filter: saturate(0.5) brightness(1.1) contrast(0.9);
+        filter: saturate(0.6) brightness(1.05) contrast(0.9);
     }
-    /* Style Sombre Épuré : Inversion des couleurs magique pour un Dark Mode parfait et gratuit */
+    /* Style Sombre Épuré : rendu nuit épuré */
     .carte-pure-sombre {
-        filter: invert(100%) hue-rotate(180deg) brightness(0.4) contrast(1.2) saturate(0.6);
+        filter: invert(100%) hue-rotate(180deg) brightness(0.4) contrast(1.1) saturate(0.6);
     }
-    /* Sécurité pour que nos marqueurs et radars ne subissent pas les filtres de fond */
+    /* Garde les couches radars et marqueurs intacts sans altération de couleur */
     .leaflet-marker-pane, .leaflet-overlay-pane {
         filter: none !important;
     }
 `;
 document.head.appendChild(styleMeteoStyle);
+
 // --- RADAR DE PLUIE LISSÉ (RainViewer) ---
 async function chargerRadarPluie() {
     try {
@@ -61,6 +60,7 @@ async function chargerRadarPluie() {
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
         
+        // Mode '0' pour adoucir les contours des pixels de pluie
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
             opacity: 0.75, 
             attribution: "Radar © RainViewer"
@@ -82,7 +82,7 @@ const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_
 controleurDeCouches.addOverlay(radarNuages, "☁️ Carte des Nuages");
 controleurDeCouches.addOverlay(radarVent, "💨 Carte des Vents");
 
-// --- 🎯 RÉINTÉGRATION DU BOUTON GÉOLOCALISATION ---
+// --- 🎯 BOUTON GÉOLOCALISATION ---
 const boutonGPS = L.control({ position: 'topleft' });
 boutonGPS.onAdd = function () {
     const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
@@ -134,7 +134,6 @@ async function chargerMeteo(lat, lon, nomDuSpot) {
     }
 }
 
-// Clic sur la carte
 carte.on('click', function(e) {
     const lat = e.latlng.lat.toFixed(2);
     const lon = e.latlng.lng.toFixed(2);
@@ -145,7 +144,6 @@ carte.on('click', function(e) {
     chargerMeteo(lat, lon, `Spot sur mesure (${lat}, ${lon})`);
 });
 
-// Barre de recherche
 document.getElementById('btn-recherche').addEventListener('click', async () => {
     const ville = document.getElementById('input-ville').value;
     if (!ville) return;
@@ -250,46 +248,6 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     
     document.getElementById('windguru-body').innerHTML = htmlFinal;
 }
-
-// ==============================================================================
-// COUCHE ANIMÉE : Flux de vent style "Nullschool"
-// ==============================================================================
-
-async function chargerFluxVentAnime() {
-    try {
-        const rep = await fetch("https://onestatistics.github.io/leaflet-velocity/wind-gbr.json");
-        const donneesVentBrutes = await rep.json();
-
-        const coucheVentAnime = L.velocityLayer({
-            displayValues: true,
-            displayOptions: {
-                velocityType: "Vent Global",
-                position: "bottomleft", 
-                emptyString: "Pas de vent détecté"
-            },
-            data: donneesVentBrutes, 
-            maxVelocity: 15,         
-            velocityScale: 0.005,    
-            particleAge: 90,         
-            particleMultiplier: 0.008, 
-            colorScale: [            
-                "rgb(36,104, 180)",
-                "rgb(60,157, 194)",
-                "rgb(128,205,193)",
-                "rgb(151,218,168)",
-                "rgb(252,217,125)",
-                "rgb(252,141,89)",
-                "rgb(215,48,39)"
-            ]
-        });
-
-        controleurDeCouches.addOverlay(coucheVentAnime, "🌪️ Flux de Vent Animé");
-    } catch (erreur) {
-        console.error("❌ Impossible de charger l'animation de vent :", erreur);
-    }
-}
-
-chargerFluxVentAnime();
 
 // --- PARTIE 4 : DÉMARRAGE ---
 chargerMeteo(48.85, 2.35, "PARIS (Par défaut)");
