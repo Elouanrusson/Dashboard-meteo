@@ -196,26 +196,28 @@ document.getElementById('btn-recherche').addEventListener('click', async () => {
     } catch (e) { console.error("Erreur Recherche:", e); }
 });
 
-// --- PARTIE 3 : LE TABLEAU INTELLIGENT ---
+// --- PARTIE 3 : LE TABLEAU INTELLIGENT (Design Professionnel) ---
 
-function bgTemp(t) { return t < 15 ? '#bae6fd' : t < 25 ? '#fef08a' : '#fecaca'; }
-function bgVent(v) { return v < 15 ? '#bbf7d0' : v < 30 ? '#fed7aa' : '#fca5a5'; }
-function couleurHoule(h) { return h < 1.0 ? '#4ade80' : h < 2.0 ? '#facc15' : h < 3.0 ? '#fb923c' : '#f87171'; }
+// Couleurs douces et pastel pour ne pas agresser l'œil
+function bgTemp(t) { return t < 15 ? '#e0f2fe' : t < 25 ? '#fef9c3' : '#fee2e2'; }
+function bgVent(v) { return v < 15 ? '#dcfce7' : v < 30 ? '#ffedd5' : '#fecaca'; }
+function couleurHoule(h) { return h < 1.0 ? '#bbf7d0' : h < 2.0 ? '#fef08a' : h < 3.0 ? '#fed7aa' : '#fca5a5'; }
 
 let indexActuelGlobal = 0; 
 function genererCellule(donnee, couleurBg, indexCellule) {
     const estActive = (indexCellule === indexActuelGlobal);
-    const styleActive = estActive ? "box-shadow: inset 0 0 0 3px #facc15; font-weight:bold; color:black;" : "";
+    // Le surlignage de l'heure actuelle devient une bordure bleue élégante au lieu du jaune flash
+    const styleActive = estActive ? "box-shadow: inset 0 0 0 2px #3b82f6; font-weight:bold; color:#1e293b;" : "color:#334155;";
     const affichage = donnee !== null ? donnee : "-";
     return `<td class="data-cell" style="background-color: ${couleurBg}; ${styleActive}">${affichage}</td>`;
 }
 
 function dessinerTableau(hourlyData, nomDuSpot) {
-    document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
+    // Titre sobre
+    document.getElementById('titre-tableau').innerText = `Prévisions Locales : ${nomDuSpot}`;
     if (!hourlyData || !hourlyData.time) return;
 
     const estMarin = hourlyData.wave_height && hourlyData.wave_height.some(val => val !== null);
-    
     const maintenant = new Date();
     indexActuelGlobal = 0;
     
@@ -229,40 +231,44 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     const indexDebut = Math.max(0, indexActuelGlobal - 3);
     const indexFin = Math.min(hourlyData.time.length - 1, indexActuelGlobal + 24);
 
-    let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
-    let ligneAlerte = `<tr><td class="colonne-fixe" style="font-weight:bold; background:#fff1f2;">Alerte Météo</td>`;
+    let ligneHeures = `<tr><td class="colonne-fixe" style="font-weight:600;">Heure</td>`;
+    let ligneAlerte = `<tr><td class="colonne-fixe" style="font-weight:600; color:#ef4444;">Alerte Météo</td>`;
     let ligneTemp = `<tr><td class="colonne-fixe">Température (°C)</td>`;
     let ligneVent = `<tr><td class="colonne-fixe">Vent (km/h)</td>`;
-    let ligneRafales = `<tr><td class="colonne-fixe">Rafales IA (km/h)</td>`;
-    let ligneHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Houle (m)</td>` : "";
-    let ligneDirHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Dir. Houle (°)</td>` : "";
-    let ligneCourant = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Courant (km/h)</td>` : "";
+    let ligneRafales = `<tr><td class="colonne-fixe">Rafales (km/h)</td>`;
+    let ligneHoule = estMarin ? `<tr><td class="colonne-fixe">Houle (m)</td>` : "";
+    let ligneDirHoule = estMarin ? `<tr><td class="colonne-fixe">Dir. Houle (°)</td>` : "";
+    let ligneCourant = estMarin ? `<tr><td class="colonne-fixe">Courant (km/h)</td>` : "";
 
     for (let i = indexDebut; i <= indexFin; i++) {
         const estHeureActuelle = (i === indexActuelGlobal);
-        const styleH = estHeureActuelle ? "color:#facc15; font-weight:bold; font-size:1.1em;" : "color:#94a3b8;";
+        const styleH = estHeureActuelle ? "color:#3b82f6; font-weight:700; font-size:1.05em;" : "color:#64748b;";
         const heureTexte = hourlyData.time[i].split('T')[1]; 
-        const affichageHeure = estHeureActuelle ? `${heureTexte}<br><span style="font-size:0.6em; color:#facc15;">Maintenant</span>` : heureTexte;
+        const affichageHeure = estHeureActuelle ? `${heureTexte}<br><span style="font-size:0.7em; text-transform:uppercase;">Actuel</span>` : heureTexte;
         
-        ligneHeures += `<td style="${styleH}">${affichageHeure}</td>`;
+        ligneHeures += `<td style="${styleH}; text-align:center;">${affichageHeure}</td>`;
         
+        // --- LOGIQUE D'ALERTE (Sans emojis, très institutionnel) ---
         let texteAlerte = "-";
         let bgAlerte = "transparent";
+        let couleurTexte = "inherit";
         
         const valCape = (hourlyData.cape && hourlyData.cape[i] !== null) ? hourlyData.cape[i] : 0;
         const valRafales = (hourlyData.rafales_ia && hourlyData.rafales_ia[i] !== null) ? hourlyData.rafales_ia[i] : 0;
 
         if (valCape > 1500) {
-            texteAlerte = "⚡ Orage Violent"; bgAlerte = "#ef4444"; 
+            texteAlerte = "ORAGE FORT"; bgAlerte = "#fef2f2"; couleurTexte = "#dc2626";
         } else if (valCape > 1000) {
-            texteAlerte = "🌩️ Risque Orage"; bgAlerte = "#f97316"; 
+            texteAlerte = "RISQUE ORAGE"; bgAlerte = "#fff7ed"; couleurTexte = "#ea580c";
         } else if (valRafales > 90) {
-            texteAlerte = "🌪️ Tempête"; bgAlerte = "#ef4444"; 
+            texteAlerte = "TEMPÊTE"; bgAlerte = "#fef2f2"; couleurTexte = "#dc2626";
         } else if (valRafales > 70) {
-            texteAlerte = "⚠️ Coup de Vent"; bgAlerte = "#eab308"; 
+            texteAlerte = "COUP DE VENT"; bgAlerte = "#fefce8"; couleurTexte = "#ca8a04";
         }
         
-        ligneAlerte += genererCellule(texteAlerte, bgAlerte, i);
+        const styleActiveA = estHeureActuelle ? "box-shadow: inset 0 0 0 2px #3b82f6;" : "";
+        ligneAlerte += `<td class="data-cell" style="background-color:${bgAlerte}; color:${couleurTexte}; font-size:0.85em; font-weight:600; ${styleActiveA}">${texteAlerte}</td>`;
+        // ---------------------------------------------
 
         ligneTemp += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
         ligneVent += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
@@ -270,7 +276,7 @@ function dessinerTableau(hourlyData, nomDuSpot) {
 
         if (estMarin) {
             ligneHoule += genererCellule(hourlyData.wave_height[i], couleurHoule(hourlyData.wave_height[i]), i);
-            ligneDirHoule += genererCellule(hourlyData.wave_direction[i], '#e2e8f0', i); 
+            ligneDirHoule += genererCellule(hourlyData.wave_direction[i], 'transparent', i); 
             ligneCourant += genererCellule(hourlyData.ocean_current_velocity[i], bgVent(hourlyData.ocean_current_velocity[i]), i);
         }
     }

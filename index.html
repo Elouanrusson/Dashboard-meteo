@@ -76,20 +76,48 @@
         }
 
         /* --- STYLE PREMIUM POUR LES BOUTONS LEAFLET --- */
-        .leaflet-bar a, 
-        .leaflet-control-layers,
-        #btn-gps {
-            background-color: rgba(30, 41, 59, 0.7) !important; /* Fond bleu nuit transparent */
-            backdrop-filter: blur(8px); /* L'effet verre dépoli magique */
-            color: #e2e8f0 !important; /* Texte/Icone clair */
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            border-radius: 8px !important; /* Bords un peu plus ronds */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+        /* 1. On enlève les bordures du conteneur global */
+        .leaflet-bar {
+            border: none !important;
+            box-shadow: none !important;
         }
 
-        /* On inverse la couleur des icones par défaut de Leaflet pour qu'elles soient blanches */
+        /* 2. On unifie tous les boutons (+, -, GPS) */
+        .leaflet-bar a, 
+        .leaflet-bar a:hover, 
+        #btn-gps {
+            background-color: rgba(30, 41, 59, 0.7) !important; /* Bleu nuit transparent */
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important; /* Support Safari / iOS */
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+
+        /* 3. On gère la vilaine ligne entre le + et le - */
+        .leaflet-bar a:first-child {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            border-top-left-radius: 8px !important;
+            border-top-right-radius: 8px !important;
+        }
+        .leaflet-bar a:last-child {
+            border-bottom-left-radius: 8px !important;
+            border-bottom-right-radius: 8px !important;
+        }
+
+        /* 4. Le menu des calques (en haut à droite) */
+        .leaflet-control-layers {
+            background-color: rgba(30, 41, 59, 0.75) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 8px !important;
+            color: #f8fafc !important; /* Texte blanc */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+        }
+
+        /* 5. On blanchit l'icône noire du menu des calques */
         .leaflet-control-layers-toggle {
-            filter: invert(100%) brightness(200%); 
+            filter: brightness(0) invert(1) opacity(0.9) !important;
         }
         .leaflet-control-zoom-in, .leaflet-control-zoom-out {
             filter: invert(100%);
