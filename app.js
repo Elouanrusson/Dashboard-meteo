@@ -1,5 +1,5 @@
 // ==============================================================================
-// DESTINATION : app.js (Version Pro Finalisée avec Particules Animées)
+// DESTINATION : app.js (Version Pro Finalisée & Corrigée)
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
@@ -11,10 +11,10 @@ const fondOpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x
     attribution: '© OpenStreetMap'
 });
 
-// 2. NOUVEAU : Fond de carte Sombre Pro (Idéal pour faire ressortir la météo !)
-const fondSombre = L.tileLayer('https://{s}.tile.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+// 2. Fond de carte Sombre Sécurisé (Jawg Light/Dark compatible sans erreur SSL)
+const fondSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© OpenStreetMap, © CARTO'
+    attribution: '© OpenStreetMap contributors, © CARTO'
 });
 
 const carte = L.map('ma-carte', {
@@ -39,7 +39,6 @@ async function chargerRadarPluie() {
         const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
-        // Opacité poussée à 0.85 pour que la pluie soit bien visible
         const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/2/1_1.png`, {
             opacity: 0.85, 
             attribution: "Radar © RainViewer"
@@ -61,28 +60,52 @@ const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_
 controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
 controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
 
+// --- 🎯 RÉINTÉGRATION DU BOUTON GÉOLOCALISATION ---
+const boutonGPS = L.control({ position: 'topleft' });
+boutonGPS.onAdd = function () {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    div.innerHTML = `<button id="btn-gps" style="background: white; border: none; width: 34px; height: 34px; cursor: pointer; font-size: 1.3em; display: flex; align-items: center; justify-content: center; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,0.4);" title="Me localiser">🎯</button>`;
+    return div;
+};
+boutonGPS.addTo(carte);
+
+document.getElementById('btn-gps').addEventListener('click', function() {
+    if (!navigator.geolocation) return alert("Géolocalisation non supportée par votre appareil.");
+    
+    const bouton = document.getElementById('btn-gps');
+    bouton.innerText = "⏳";
+    
+    navigator.geolocation.getCurrentPosition(
+        function (position) {
+            bouton.innerText = "🎯";
+            const lat = position.coords.latitude.toFixed(2);
+            const lon = position.coords.longitude.toFixed(2);
+            
+            carte.setView([lat, lon], 10);
+            if (marqueurDynamique) carte.removeLayer(marqueurDynamique);
+            marqueurDynamique = L.marker([lat, lon]).addTo(carte).bindPopup(`<b>Ma Position</b>`).openPopup();
+            
+            chargerMeteo(lat, lon, "Ma Position (GPS)");
+        },
+        function () { bouton.innerText = "🎯"; alert("Erreur GPS ou permission refusée."); }
+    );
+});
+
 // --- PARTIE 2 : INTERACTIONS (Clic & Recherche) ---
 
-// Unification de l'appel au serveur Python (AVEC BOUCLIER ANTI-CRASH 🛡️)
 async function chargerMeteo(lat, lon, nomDuSpot) {
     try {
         const rep = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}&t=${Date.now()}`);
-        // 1. Vérification : est-ce que le serveur a renvoyé une erreur (ex: 500) ?
-        if (!rep.ok) {
-            throw new Error(`Le serveur a renvoyé une erreur HTTP ${rep.status}`);
-        }
+        if (!rep.ok) throw new Error(`Le serveur a renvoyé une erreur HTTP ${rep.status}`);
 
         const data = await rep.json();
-        // 2. Affichage dans la console F12 pour nous aider à déboguer
         console.log(`📡 Réponse du serveur pour ${nomDuSpot} :`, data);
-        // 3. Le Bouclier : on vérifie que "data" n'est pas nul et contient bien "hourly"
         if (!data || !data.hourly) {
             console.warn("⚠️ Données incomplètes ou nulles reçues du serveur !");
             alert(`Météo indisponible pour ce point : ${nomDuSpot}.`);
             return; 
         }
 
-        // Si tout va bien, on dessine le tableau !
         dessinerTableau(data.hourly, nomDuSpot);
     } catch (erreur) { 
         console.error("❌ Erreur API Météo:", erreur);
@@ -123,12 +146,10 @@ document.getElementById('btn-recherche').addEventListener('click', async () => {
 
 // --- PARTIE 3 : LE TABLEAU INTELLIGENT ---
 
-// Couleurs
 function bgTemp(t) { return t < 15 ? '#bae6fd' : t < 25 ? '#fef08a' : '#fecaca'; }
 function bgVent(v) { return v < 15 ? '#bbf7d0' : v < 30 ? '#fed7aa' : '#fca5a5'; }
 function couleurHoule(h) { return h < 1.0 ? '#4ade80' : h < 2.0 ? '#facc15' : h < 3.0 ? '#fb923c' : '#f87171'; }
 
-// Construction des cases du tableau
 let indexActuelGlobal = 0; 
 function genererCellule(donnee, couleurBg, indexCellule) {
     const estActive = (indexCellule === indexActuelGlobal);
@@ -137,7 +158,6 @@ function genererCellule(donnee, couleurBg, indexCellule) {
     return `<td class="data-cell" style="background-color: ${couleurBg}; ${styleActive}">${affichage}</td>`;
 }
 
-// Dessin final du tableau (Avec Alertes Météo Extrêmes)
 function dessinerTableau(hourlyData, nomDuSpot) {
     document.getElementById('titre-tableau').innerText = `📍 Prévisions Locales — ${nomDuSpot}`;
     if (!hourlyData || !hourlyData.time) return;
@@ -158,7 +178,6 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     const indexFin = Math.min(hourlyData.time.length - 1, indexActuelGlobal + 24);
 
     let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
-    // --- 🚨 NOUVELLE LIGNE ALERTE ---
     let ligneAlerte = `<tr><td class="colonne-fixe" style="font-weight:bold; background:#fff1f2;">Alerte Météo</td>`;
     let ligneTemp = `<tr><td class="colonne-fixe">Température (°C)</td>`;
     let ligneVent = `<tr><td class="colonne-fixe">Vent (km/h)</td>`;
@@ -175,7 +194,6 @@ function dessinerTableau(hourlyData, nomDuSpot) {
         
         ligneHeures += `<td style="${styleH}">${affichageHeure}</td>`;
         
-        // --- ⚡ LOGIQUE EXTRÊME (Orages & Tempêtes) ---
         let texteAlerte = "-";
         let bgAlerte = "transparent";
         
@@ -209,7 +227,7 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     if (estMarin) { htmlFinal += ligneHoule + "</tr>" + ligneDirHoule + "</tr>" + ligneCourant + "</tr>"; }
     
     document.getElementById('windguru-body').innerHTML = htmlFinal;
-} // <-- FIX 1 : La fonction dessinerTableau se ferme bien ici !
+}
 
 // ==============================================================================
 // COUCHE ANIMÉE : Flux de vent style "Nullschool"
@@ -249,10 +267,7 @@ async function chargerFluxVentAnime() {
     }
 }
 
-// Lancement de l'animation
 chargerFluxVentAnime();
 
 // --- PARTIE 4 : DÉMARRAGE ---
-// Au chargement du site, on affiche la météo de Paris par défaut au lieu d'avoir un tableau vide !
 chargerMeteo(48.85, 2.35, "PARIS (Par défaut)");
-// <-- FIX 2 : Suppression de l'accolade en trop qui faisait crasher le script !
