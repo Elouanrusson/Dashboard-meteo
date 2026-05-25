@@ -3,25 +3,20 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" SÉCURISÉ ---
+// --- PARTIE 1 : INITIALISATION STYLE SÉCURISÉ & GRATUIT ---
 
-// 1. Fond de carte Clair Épuré (Sans routes, parfait pour la météo)
-const fondAppleMeteo = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '© Stadia Maps, © OpenStreetMap'
-});
-
-// 2. Fond de carte Sombre Épuré (Mode Nuit)
-const fondSombre = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '© Stadia Maps, © OpenStreetMap'
-});
-
-// 3. Les étiquettes des villes qui s'affichent PAR-DESSUS la météo
-const etiquettesFrontieres = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// 1. Fond de carte Standard (On va le lisser en CSS)
+const fondAppleMeteo = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    opacity: 0.0, // On cache le fond de cette carte...
-    pane: 'shadowPane' // ...mais Leaflet va forcer ses textes à passer au-dessus des radars !
+    attribution: '© OpenStreetMap',
+    className: 'carte-pure-claire' // <-- Classe personnalisée pour notre CSS
+});
+
+// 2. Fond de carte Sombre (Généré proprement sans clé API externe)
+const fondSombre = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap',
+    className: 'carte-pure-sombre' // <-- Classe personnalisée pour notre CSS
 });
 
 const carte = L.map('ma-carte', {
@@ -34,12 +29,31 @@ let marqueurDynamique = null;
 
 // Menu des couches de base
 const couchesDeBase = { 
-    "🌤️ Style Apple Météo (Clair)": fondAppleMeteo,
-    "🌙 Style Apple Météo (Sombre)": fondSombre
+    "🌤️ Style Épuré (Clair)": fondAppleMeteo,
+    "🌙 Style Épuré (Sombre)": fondSombre
 };
 const couchesSuperposees = {}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
+// --- 🎨 INJECTION DU STYLE "APPLE MÉTÉO" SANS CLÉ API ---
+// On crée un petit bloc de style CSS à la volée pour adoucir la carte OpenStreetMap
+// et simuler le rendu Apple Météo (Muted) et le mode sombre parfait.
+const styleMeteoStyle = document.createElement('style');
+styleMeteoStyle.innerHTML = `
+    /* Style Clair Épuré : On diminue la saturation et on augmente la luminosité pour effacer visuellement les routes agressives */
+    .carte-pure-claire {
+        filter: saturate(0.5) brightness(1.1) contrast(0.9);
+    }
+    /* Style Sombre Épuré : Inversion des couleurs magique pour un Dark Mode parfait et gratuit */
+    .carte-pure-sombre {
+        filter: invert(100%) hue-rotate(180deg) brightness(0.4) contrast(1.2) saturate(0.6);
+    }
+    /* Sécurité pour que nos marqueurs et radars ne subissent pas les filtres de fond */
+    .leaflet-marker-pane, .leaflet-overlay-pane {
+        filter: none !important;
+    }
+`;
+document.head.appendChild(styleMeteoStyle);
 // --- RADAR DE PLUIE LISSÉ (RainViewer) ---
 async function chargerRadarPluie() {
     try {
