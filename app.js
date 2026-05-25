@@ -3,62 +3,73 @@
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
-// --- PARTIE 1 : INITIALISATION DE LA CARTE ---
+// --- PARTIE 1 : INITIALISATION STYLE "APPLE MÉTÉO" ---
 
-// 1. Fond de carte Standard (Lumineux)
-const fondOpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
+// 1. Le fond style "Apple Météo" (Ultra-épuré, presque invisible, sans routes)
+// Idéal pour que seules les couleurs de la météo habillent la carte
+const fondAppleMeteo = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© CARTO'
 });
 
-// 2. Fond de carte Sombre Sécurisé (Jawg Light/Dark compatible sans erreur SSL)
-const fondSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+// 2. Le fond Sombre Météo (Pour le mode nuit d'Apple)
+const fondSombre = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
-    attribution: '© OpenStreetMap contributors, © CARTO'
+    attribution: '© CARTO'
+});
+
+// 3. Les étiquettes (Villes/Pays) qu'on affichera PAR-DESSUS la météo pour que les noms restent lisibles !
+const etiquettesFrontieres = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    pane: 'shadowPane' // Force l'affichage au-dessus des radars météo
 });
 
 const carte = L.map('ma-carte', {
     center: [46.60, 2.00], // Centré sur la France
     zoom: 5,
-    layers: [fondSombre] // On charge le mode sombre par défaut pour le style météo
+    layers: [fondAppleMeteo, etiquettesFrontieres] // Activés par défaut
 });
 
 let marqueurDynamique = null;
 
 // Menu des couches de base
 const couchesDeBase = { 
-    "🖤 Mode Sombre Météo": fondSombre,
-    "🗺️ Carte Standard": fondOpenStreetMap 
+    "🌤️ Style Apple Météo (Clair)": fondAppleMeteo,
+    "🌙 Style Apple Météo (Sombre)": fondSombre
 };
-const couchesSuperposees = {}; 
+const couchesSuperposees = {
+    "📌 Noms des Villes": etiquettesFrontieres
+}; 
 const controleurDeCouches = L.control.layers(couchesDeBase, couchesSuperposees).addTo(carte);
 
-// --- RADAR DE PLUIE (RainViewer) ---
+// --- RADAR DE PLUIE LISSÉ (RainViewer) ---
 async function chargerRadarPluie() {
     try {
         const rep = await fetch("https://api.rainviewer.com/public/weather-maps.json");
         const data = await rep.json();
         const derniereImage = data.radar.past[data.radar.past.length - 1];
-        const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-            opacity: 0.85, 
+        
+        // Option 'smooth' (1) et palette '0' (style Apple/Windy) pour un rendu fluide sans pixel
+        const radarPluie = L.tileLayer(`${data.host}${derniereImage.path}/256/{z}/{x}/{y}/0/1_1.png`, {
+            opacity: 0.75, 
             attribution: "Radar © RainViewer"
         });
-        controleurDeCouches.addOverlay(radarPluie, "🌧️ Radar de Précipitations");
+        controleurDeCouches.addOverlay(radarPluie, "🌧️ Carte des Précipitations");
     } catch (erreur) { console.error("Erreur RainViewer:", erreur); }
 }
 chargerRadarPluie();
 
-// --- COUCHES OPENWEATHERMAP (Sécurisées via Proxy + Opacité Maximale 💪) ---
+// --- COUCHES OPENWEATHERMAP (Sécurisées + Rendu Continu) ---
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
-    opacity: 0.95, 
+    opacity: 0.8, 
     attribution: "Nuages © OpenWeatherMap" 
 });
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
-    opacity: 0.95, 
+    opacity: 0.75, 
     attribution: "Vent © OpenWeatherMap" 
 });
-controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
-controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
+controleurDeCouches.addOverlay(radarNuages, "☁️ Carte des Nuages");
+controleurDeCouches.addOverlay(radarVent, "💨 Carte des Vents");
 
 // --- 🎯 RÉINTÉGRATION DU BOUTON GÉOLOCALISATION ---
 const boutonGPS = L.control({ position: 'topleft' });
