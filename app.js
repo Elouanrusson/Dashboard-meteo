@@ -1,5 +1,5 @@
 // ==============================================================================
-// DESTINATION : app.js (Version Pro Finalisée)
+// DESTINATION : app.js (Version Pro Finalisée avec Particules Animées)
 // RÔLE : Carte dynamique, Géolocalisation, Couches Météo, Tableau intelligent
 // ==============================================================================
 
@@ -25,7 +25,7 @@ const carte = L.map('ma-carte', {
 
 let marqueurDynamique = null;
 
-// Menu des couches de base (L'utilisateur peut maintenant choisir son style de carte)
+// Menu des couches de base
 const couchesDeBase = { 
     "🖤 Mode Sombre Météo": fondSombre,
     "🗺️ Carte Standard": fondOpenStreetMap 
@@ -50,17 +50,14 @@ async function chargerRadarPluie() {
 chargerRadarPluie();
 
 // --- COUCHES OPENWEATHERMAP (Sécurisées via Proxy + Opacité Maximale 💪) ---
-// On pousse l'opacité à 0.95 (presque opaque) pour voir parfaitement les zones
 const radarNuages = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/clouds_new/{z}/{x}/{y}`, { 
     opacity: 0.95, 
     attribution: "Nuages © OpenWeatherMap" 
 });
-
 const radarVent = L.tileLayer(`https://dashboard-meteo.onrender.com/cartes/wind_new/{z}/{x}/{y}`, { 
     opacity: 0.95, 
     attribution: "Vent © OpenWeatherMap" 
 });
-
 controleurDeCouches.addOverlay(radarNuages, "☁️ Couverture Nuageuse");
 controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
 
@@ -70,29 +67,25 @@ controleurDeCouches.addOverlay(radarVent, "💨 Vitesse du Vent");
 async function chargerMeteo(lat, lon, nomDuSpot) {
     try {
         const rep = await fetch(`https://dashboard-meteo.onrender.com/previsions?lat=${lat}&lon=${lon}&t=${Date.now()}`);
-        
         // 1. Vérification : est-ce que le serveur a renvoyé une erreur (ex: 500) ?
         if (!rep.ok) {
             throw new Error(`Le serveur a renvoyé une erreur HTTP ${rep.status}`);
         }
 
         const data = await rep.json();
-        
         // 2. Affichage dans la console F12 pour nous aider à déboguer
         console.log(`📡 Réponse du serveur pour ${nomDuSpot} :`, data);
-
         // 3. Le Bouclier : on vérifie que "data" n'est pas nul et contient bien "hourly"
         if (!data || !data.hourly) {
             console.warn("⚠️ Données incomplètes ou nulles reçues du serveur !");
             alert(`Météo indisponible pour ce point : ${nomDuSpot}.`);
-            return; // On arrête la fonction ici, on ne dessine pas le tableau.
+            return; 
         }
 
         // Si tout va bien, on dessine le tableau !
         dessinerTableau(data.hourly, nomDuSpot);
-
     } catch (erreur) { 
-        console.error("❌ Erreur API Météo:", erreur); 
+        console.error("❌ Erreur API Météo:", erreur);
     }
 }
 
@@ -136,11 +129,10 @@ function bgVent(v) { return v < 15 ? '#bbf7d0' : v < 30 ? '#fed7aa' : '#fca5a5';
 function couleurHoule(h) { return h < 1.0 ? '#4ade80' : h < 2.0 ? '#facc15' : h < 3.0 ? '#fb923c' : '#f87171'; }
 
 // Construction des cases du tableau
-let indexActuelGlobal = 0; // Pour le surlignage
+let indexActuelGlobal = 0; 
 function genererCellule(donnee, couleurBg, indexCellule) {
     const estActive = (indexCellule === indexActuelGlobal);
     const styleActive = estActive ? "box-shadow: inset 0 0 0 3px #facc15; font-weight:bold; color:black;" : "";
-    // Sécurité : si la donnée est null, on affiche un tiret
     const affichage = donnee !== null ? donnee : "-";
     return `<td class="data-cell" style="background-color: ${couleurBg}; ${styleActive}">${affichage}</td>`;
 }
@@ -152,7 +144,7 @@ function dessinerTableau(hourlyData, nomDuSpot) {
 
     const estMarin = hourlyData.wave_height && hourlyData.wave_height.some(val => val !== null);
     
-    const maintenant = new Date(); 
+    const maintenant = new Date();
     indexActuelGlobal = 0;
     
     for (let i = 0; i < hourlyData.time.length; i++) {
@@ -166,14 +158,11 @@ function dessinerTableau(hourlyData, nomDuSpot) {
     const indexFin = Math.min(hourlyData.time.length - 1, indexActuelGlobal + 24);
 
     let ligneHeures = `<tr><td class="colonne-fixe">Heure</td>`;
-    
     // --- 🚨 NOUVELLE LIGNE ALERTE ---
     let ligneAlerte = `<tr><td class="colonne-fixe" style="font-weight:bold; background:#fff1f2;">Alerte Météo</td>`;
-    
     let ligneTemp = `<tr><td class="colonne-fixe">Température (°C)</td>`;
     let ligneVent = `<tr><td class="colonne-fixe">Vent (km/h)</td>`;
     let ligneRafales = `<tr><td class="colonne-fixe">Rafales IA (km/h)</td>`;
-    
     let ligneHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Houle (m)</td>` : "";
     let ligneDirHoule = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Dir. Houle (°)</td>` : "";
     let ligneCourant = estMarin ? `<tr><td class="colonne-fixe" style="background:#e0f2fe;">Courant (km/h)</td>` : "";
@@ -190,22 +179,20 @@ function dessinerTableau(hourlyData, nomDuSpot) {
         let texteAlerte = "-";
         let bgAlerte = "transparent";
         
-        // On sécurise au cas où l'API n'enverrait pas la donnée (ex: bug d'Open-Meteo)
         const valCape = (hourlyData.cape && hourlyData.cape[i] !== null) ? hourlyData.cape[i] : 0;
         const valRafales = (hourlyData.rafales_ia && hourlyData.rafales_ia[i] !== null) ? hourlyData.rafales_ia[i] : 0;
 
         if (valCape > 1500) {
-            texteAlerte = "⚡ Orage Violent"; bgAlerte = "#ef4444"; // Rouge
+            texteAlerte = "⚡ Orage Violent"; bgAlerte = "#ef4444"; 
         } else if (valCape > 1000) {
-            texteAlerte = "🌩️ Risque Orage"; bgAlerte = "#f97316"; // Orange
+            texteAlerte = "🌩️ Risque Orage"; bgAlerte = "#f97316"; 
         } else if (valRafales > 90) {
-            texteAlerte = "🌪️ Tempête"; bgAlerte = "#ef4444"; // Rouge
+            texteAlerte = "🌪️ Tempête"; bgAlerte = "#ef4444"; 
         } else if (valRafales > 70) {
-            texteAlerte = "⚠️ Coup de Vent"; bgAlerte = "#eab308"; // Jaune
+            texteAlerte = "⚠️ Coup de Vent"; bgAlerte = "#eab308"; 
         }
         
         ligneAlerte += genererCellule(texteAlerte, bgAlerte, i);
-        // ---------------------------------------------
 
         ligneTemp += genererCellule(hourlyData.temperature_2m[i], bgTemp(hourlyData.temperature_2m[i]), i);
         ligneVent += genererCellule(hourlyData.wind_speed_10m[i], bgVent(hourlyData.wind_speed_10m[i]), i);
@@ -218,13 +205,54 @@ function dessinerTableau(hourlyData, nomDuSpot) {
         }
     }
     
-    // Assemblage final avec la nouvelle ligne !
     let htmlFinal = ligneHeures + "</tr>" + ligneAlerte + "</tr>" + ligneTemp + "</tr>" + ligneVent + "</tr>" + ligneRafales + "</tr>";
     if (estMarin) { htmlFinal += ligneHoule + "</tr>" + ligneDirHoule + "</tr>" + ligneCourant + "</tr>"; }
     
     document.getElementById('windguru-body').innerHTML = htmlFinal;
+} // <-- FIX 1 : La fonction dessinerTableau se ferme bien ici !
+
+// ==============================================================================
+// COUCHE ANIMÉE : Flux de vent style "Nullschool"
+// ==============================================================================
+
+async function chargerFluxVentAnime() {
+    try {
+        const rep = await fetch("https://onestatistics.github.io/leaflet-velocity/wind-gbr.json");
+        const donneesVentBrutes = await rep.json();
+
+        const coucheVentAnime = L.velocityLayer({
+            displayValues: true,
+            displayOptions: {
+                velocityType: "Vent Global",
+                position: "bottomleft", 
+                emptyString: "Pas de vent détecté"
+            },
+            data: donneesVentBrutes, 
+            maxVelocity: 15,         
+            velocityScale: 0.005,    
+            particleAge: 90,         
+            particleMultiplier: 0.008, 
+            colorScale: [            
+                "rgb(36,104, 180)",
+                "rgb(60,157, 194)",
+                "rgb(128,205,193)",
+                "rgb(151,218,168)",
+                "rgb(252,217,125)",
+                "rgb(252,141,89)",
+                "rgb(215,48,39)"
+            ]
+        });
+
+        controleurDeCouches.addOverlay(coucheVentAnime, "🌪️ Flux de Vent Animé");
+    } catch (erreur) {
+        console.error("❌ Impossible de charger l'animation de vent :", erreur);
+    }
 }
+
+// Lancement de l'animation
+chargerFluxVentAnime();
 
 // --- PARTIE 4 : DÉMARRAGE ---
 // Au chargement du site, on affiche la météo de Paris par défaut au lieu d'avoir un tableau vide !
 chargerMeteo(48.85, 2.35, "PARIS (Par défaut)");
+// <-- FIX 2 : Suppression de l'accolade en trop qui faisait crasher le script !
